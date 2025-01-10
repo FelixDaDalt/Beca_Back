@@ -11,6 +11,8 @@ import { beca_solicitud as _beca_solicitud } from "./beca_solicitud";
 import type { beca_solicitudAttributes, beca_solicitudCreationAttributes } from "./beca_solicitud";
 import { colegio as _colegio } from "./colegio";
 import type { colegioAttributes, colegioCreationAttributes } from "./colegio";
+import { entidad_tipo as _entidad_tipo } from "./entidad_tipo";
+import type { entidad_tipoAttributes, entidad_tipoCreationAttributes } from "./entidad_tipo";
 import { ingresos_administradores as _ingresos_administradores } from "./ingresos_administradores";
 import type { ingresos_administradoresAttributes, ingresos_administradoresCreationAttributes } from "./ingresos_administradores";
 import { ingresos_usuarios as _ingresos_usuarios } from "./ingresos_usuarios";
@@ -21,18 +23,8 @@ import { red as _red } from "./red";
 import type { redAttributes, redCreationAttributes } from "./red";
 import { red_colegio as _red_colegio } from "./red_colegio";
 import type { red_colegioAttributes, red_colegioCreationAttributes } from "./red_colegio";
-import { registro_administrador as _registro_administrador } from "./registro_administrador";
-import type { registro_administradorAttributes, registro_administradorCreationAttributes } from "./registro_administrador";
-import { registro_autorizado as _registro_autorizado } from "./registro_autorizado";
-import type { registro_autorizadoAttributes, registro_autorizadoCreationAttributes } from "./registro_autorizado";
-import { registro_colegio as _registro_colegio } from "./registro_colegio";
-import type { registro_colegioAttributes, registro_colegioCreationAttributes } from "./registro_colegio";
-import { registro_delegado as _registro_delegado } from "./registro_delegado";
-import type { registro_delegadoAttributes, registro_delegadoCreationAttributes } from "./registro_delegado";
-import { registro_red as _registro_red } from "./registro_red";
-import type { registro_redAttributes, registro_redCreationAttributes } from "./registro_red";
-import { registro_responsable as _registro_responsable } from "./registro_responsable";
-import type { registro_responsableAttributes, registro_responsableCreationAttributes } from "./registro_responsable";
+import { registroeventos as _registroeventos } from "./registroeventos";
+import type { registroeventosAttributes, registroeventosCreationAttributes } from "./registroeventos";
 import { roles as _roles } from "./roles";
 import type { rolesAttributes, rolesCreationAttributes } from "./roles";
 import { tyc as _tyc } from "./tyc";
@@ -51,17 +43,13 @@ export {
   _beca_resolucion as beca_resolucion,
   _beca_solicitud as beca_solicitud,
   _colegio as colegio,
+  _entidad_tipo as entidad_tipo,
   _ingresos_administradores as ingresos_administradores,
   _ingresos_usuarios as ingresos_usuarios,
   _menu as menu,
   _red as red,
   _red_colegio as red_colegio,
-  _registro_administrador as registro_administrador,
-  _registro_autorizado as registro_autorizado,
-  _registro_colegio as registro_colegio,
-  _registro_delegado as registro_delegado,
-  _registro_red as registro_red,
-  _registro_responsable as registro_responsable,
+  _registroeventos as registroeventos,
   _roles as roles,
   _tyc as tyc,
   _usuario as usuario,
@@ -82,6 +70,8 @@ export type {
   beca_solicitudCreationAttributes,
   colegioAttributes,
   colegioCreationAttributes,
+  entidad_tipoAttributes,
+  entidad_tipoCreationAttributes,
   ingresos_administradoresAttributes,
   ingresos_administradoresCreationAttributes,
   ingresos_usuariosAttributes,
@@ -92,18 +82,8 @@ export type {
   redCreationAttributes,
   red_colegioAttributes,
   red_colegioCreationAttributes,
-  registro_administradorAttributes,
-  registro_administradorCreationAttributes,
-  registro_autorizadoAttributes,
-  registro_autorizadoCreationAttributes,
-  registro_colegioAttributes,
-  registro_colegioCreationAttributes,
-  registro_delegadoAttributes,
-  registro_delegadoCreationAttributes,
-  registro_redAttributes,
-  registro_redCreationAttributes,
-  registro_responsableAttributes,
-  registro_responsableCreationAttributes,
+  registroeventosAttributes,
+  registroeventosCreationAttributes,
   rolesAttributes,
   rolesCreationAttributes,
   tycAttributes,
@@ -123,17 +103,13 @@ export function initModels(sequelize: Sequelize) {
   const beca_resolucion = _beca_resolucion.initModel(sequelize);
   const beca_solicitud = _beca_solicitud.initModel(sequelize);
   const colegio = _colegio.initModel(sequelize);
+  const entidad_tipo = _entidad_tipo.initModel(sequelize);
   const ingresos_administradores = _ingresos_administradores.initModel(sequelize);
   const ingresos_usuarios = _ingresos_usuarios.initModel(sequelize);
   const menu = _menu.initModel(sequelize);
   const red = _red.initModel(sequelize);
   const red_colegio = _red_colegio.initModel(sequelize);
-  const registro_administrador = _registro_administrador.initModel(sequelize);
-  const registro_autorizado = _registro_autorizado.initModel(sequelize);
-  const registro_colegio = _registro_colegio.initModel(sequelize);
-  const registro_delegado = _registro_delegado.initModel(sequelize);
-  const registro_red = _registro_red.initModel(sequelize);
-  const registro_responsable = _registro_responsable.initModel(sequelize);
+  const registroeventos = _registroeventos.initModel(sequelize);
   const roles = _roles.initModel(sequelize);
   const tyc = _tyc.initModel(sequelize);
   const usuario = _usuario.initModel(sequelize);
@@ -144,44 +120,46 @@ export function initModels(sequelize: Sequelize) {
   red.belongsToMany(colegio, { as: 'id_colegio_colegios', through: red_colegio, foreignKey: "id_red", otherKey: "id_colegio" });
   ingresos_administradores.belongsTo(administrador, { as: "id_usuario_administrador", foreignKey: "id_usuario"});
   administrador.hasMany(ingresos_administradores, { as: "ingresos_administradores", foreignKey: "id_usuario"});
-  registro_administrador.belongsTo(administrador, { as: "id_usuario_administrador", foreignKey: "id_usuario"});
-  administrador.hasMany(registro_administrador, { as: "registro_administradors", foreignKey: "id_usuario"});
+  registroeventos.belongsTo(administrador, { as: "administrador", foreignKey: "administrador_id"});
+  administrador.hasMany(registroeventos, { as: "registroeventos", foreignKey: "administrador_id"});
   beca_solicitud.belongsTo(beca, { as: "id_beca_beca", foreignKey: "id_beca"});
   beca.hasMany(beca_solicitud, { as: "beca_solicituds", foreignKey: "id_beca"});
-  beca.belongsTo(beca_estado, { as: "id_estado_beca_estado", foreignKey: "id_estado"});
-  beca_estado.hasMany(beca, { as: "becas", foreignKey: "id_estado"});
+  beca_solicitud.belongsTo(beca_estado, { as: "id_estado_beca_estado", foreignKey: "id_estado"});
+  beca_estado.hasMany(beca_solicitud, { as: "beca_solicituds", foreignKey: "id_estado"});
   beca_solicitud.belongsTo(beca_resolucion, { as: "id_resolucion_beca_resolucion", foreignKey: "id_resolucion"});
   beca_resolucion.hasMany(beca_solicitud, { as: "beca_solicituds", foreignKey: "id_resolucion"});
+  beca.belongsTo(colegio, { as: "id_colegio_colegio", foreignKey: "id_colegio"});
+  colegio.hasMany(beca, { as: "becas", foreignKey: "id_colegio"});
   beca_solicitud.belongsTo(colegio, { as: "id_colegio_solic_colegio", foreignKey: "id_colegio_solic"});
   colegio.hasMany(beca_solicitud, { as: "beca_solicituds", foreignKey: "id_colegio_solic"});
   red_colegio.belongsTo(colegio, { as: "id_colegio_colegio", foreignKey: "id_colegio"});
   colegio.hasMany(red_colegio, { as: "red_colegios", foreignKey: "id_colegio"});
-  registro_colegio.belongsTo(colegio, { as: "id_colegio_colegio", foreignKey: "id_colegio"});
-  colegio.hasMany(registro_colegio, { as: "registro_colegios", foreignKey: "id_colegio"});
+  registroeventos.belongsTo(colegio, { as: "id_colegio_colegio", foreignKey: "id_colegio"});
+  colegio.hasMany(registroeventos, { as: "registroeventos", foreignKey: "id_colegio"});
   usuario.belongsTo(colegio, { as: "id_colegio_colegio", foreignKey: "id_colegio"});
   colegio.hasMany(usuario, { as: "usuarios", foreignKey: "id_colegio"});
+  registroeventos.belongsTo(entidad_tipo, { as: "entidad_tipo", foreignKey: "entidad_tipo_id"});
+  entidad_tipo.hasMany(registroeventos, { as: "registroeventos", foreignKey: "entidad_tipo_id"});
   beca.belongsTo(red, { as: "id_red_red", foreignKey: "id_red"});
   red.hasMany(beca, { as: "becas", foreignKey: "id_red"});
   red_colegio.belongsTo(red, { as: "id_red_red", foreignKey: "id_red"});
   red.hasMany(red_colegio, { as: "red_colegios", foreignKey: "id_red"});
-  registro_red.belongsTo(red, { as: "id_red_red", foreignKey: "id_red"});
-  red.hasMany(registro_red, { as: "registro_reds", foreignKey: "id_red"});
   administrador.belongsTo(roles, { as: "id_rol_role", foreignKey: "id_rol"});
   roles.hasMany(administrador, { as: "administradors", foreignKey: "id_rol"});
+  registroeventos.belongsTo(roles, { as: "id_rol_role", foreignKey: "id_rol"});
+  roles.hasMany(registroeventos, { as: "registroeventos", foreignKey: "id_rol"});
   usuario.belongsTo(roles, { as: "id_rol_role", foreignKey: "id_rol"});
   roles.hasMany(usuario, { as: "usuarios", foreignKey: "id_rol"});
+  beca.belongsTo(usuario, { as: "id_usuario_usuario", foreignKey: "id_usuario"});
+  usuario.hasMany(beca, { as: "becas", foreignKey: "id_usuario"});
   beca_solicitud.belongsTo(usuario, { as: "id_usuario_solic_usuario", foreignKey: "id_usuario_solic"});
   usuario.hasMany(beca_solicitud, { as: "beca_solicituds", foreignKey: "id_usuario_solic"});
   beca_solicitud.belongsTo(usuario, { as: "id_usuario_reso_usuario", foreignKey: "id_usuario_reso"});
   usuario.hasMany(beca_solicitud, { as: "id_usuario_reso_beca_solicituds", foreignKey: "id_usuario_reso"});
   ingresos_usuarios.belongsTo(usuario, { as: "id_usuario_usuario", foreignKey: "id_usuario"});
   usuario.hasMany(ingresos_usuarios, { as: "ingresos_usuarios", foreignKey: "id_usuario"});
-  registro_autorizado.belongsTo(usuario, { as: "id_usuario_usuario", foreignKey: "id_usuario"});
-  usuario.hasMany(registro_autorizado, { as: "registro_autorizados", foreignKey: "id_usuario"});
-  registro_delegado.belongsTo(usuario, { as: "id_usuario_usuario", foreignKey: "id_usuario"});
-  usuario.hasMany(registro_delegado, { as: "registro_delegados", foreignKey: "id_usuario"});
-  registro_responsable.belongsTo(usuario, { as: "id_usuario_usuario", foreignKey: "id_usuario"});
-  usuario.hasMany(registro_responsable, { as: "registro_responsables", foreignKey: "id_usuario"});
+  registroeventos.belongsTo(usuario, { as: "usuario", foreignKey: "usuario_id"});
+  usuario.hasMany(registroeventos, { as: "registroeventos", foreignKey: "usuario_id"});
   zona_localidad.belongsTo(zona, { as: "zona", foreignKey: "id_zona"});
   zona.hasMany(zona_localidad, { as: "zona_localidad", foreignKey: "id_zona"});
   colegio.belongsTo(zona_localidad, { as: "zona_localidad", foreignKey: "id_zona"});
@@ -194,17 +172,13 @@ export function initModels(sequelize: Sequelize) {
     beca_resolucion: beca_resolucion,
     beca_solicitud: beca_solicitud,
     colegio: colegio,
+    entidad_tipo: entidad_tipo,
     ingresos_administradores: ingresos_administradores,
     ingresos_usuarios: ingresos_usuarios,
     menu: menu,
     red: red,
     red_colegio: red_colegio,
-    registro_administrador: registro_administrador,
-    registro_autorizado: registro_autorizado,
-    registro_colegio: registro_colegio,
-    registro_delegado: registro_delegado,
-    registro_red: registro_red,
-    registro_responsable: registro_responsable,
+    registroeventos: registroeventos,
     roles: roles,
     tyc: tyc,
     usuario: usuario,

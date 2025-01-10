@@ -32,6 +32,7 @@ const altaResponsable = async (nuevoResponsable: usuario, transaction:Transactio
 
         // 3. Agregar el responsable
         nuevoResponsable.id_rol = 1; 
+        nuevoResponsable.cambiarPass = 1;
         const agregarResponsable = await usuario.create(nuevoResponsable, { transaction }); // Incluye la transacción
 
         // 5. Devolver el token y los datos del usuario al cliente

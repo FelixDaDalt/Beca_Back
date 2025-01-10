@@ -1,7 +1,7 @@
 import * as Sequelize from 'sequelize';
 import { DataTypes, Model, Optional } from 'sequelize';
 import type { ingresos_administradores, ingresos_administradoresId } from './ingresos_administradores';
-import type { registro_administrador, registro_administradorId } from './registro_administrador';
+import type { registroeventos, registroeventosId } from './registroeventos';
 import type { roles, rolesId } from './roles';
 
 export interface administradorAttributes {
@@ -10,17 +10,19 @@ export interface administradorAttributes {
   password: string;
   nombre: string;
   apellido: string;
-  celular?: string;
-  telefono?: string;
+  celular: string;
+  telefono: string;
   id_rol: number;
   cambiarPass?: number;
   suspendido?: number;
   borrado?: number;
+  foto?: string;
+  email: string;
 }
 
 export type administradorPk = "id";
 export type administradorId = administrador[administradorPk];
-export type administradorOptionalAttributes = "id" | "celular" | "telefono" | "id_rol" | "cambiarPass" | "suspendido" | "borrado";
+export type administradorOptionalAttributes = "id" | "celular" | "telefono" | "id_rol" | "cambiarPass" | "suspendido" | "borrado" | "foto" | "email";
 export type administradorCreationAttributes = Optional<administradorAttributes, administradorOptionalAttributes>;
 
 export class administrador extends Model<administradorAttributes, administradorCreationAttributes> implements administradorAttributes {
@@ -29,12 +31,14 @@ export class administrador extends Model<administradorAttributes, administradorC
   password!: string;
   nombre!: string;
   apellido!: string;
-  celular?: string;
-  telefono?: string;
+  celular!: string;
+  telefono!: string;
   id_rol!: number;
   cambiarPass?: number;
   suspendido?: number;
   borrado?: number;
+  foto?: string;
+  email!: string;
 
   // administrador hasMany ingresos_administradores via id_usuario
   ingresos_administradores!: ingresos_administradores[];
@@ -48,18 +52,18 @@ export class administrador extends Model<administradorAttributes, administradorC
   hasIngresos_administradore!: Sequelize.HasManyHasAssociationMixin<ingresos_administradores, ingresos_administradoresId>;
   hasIngresos_administradores!: Sequelize.HasManyHasAssociationsMixin<ingresos_administradores, ingresos_administradoresId>;
   countIngresos_administradores!: Sequelize.HasManyCountAssociationsMixin;
-  // administrador hasMany registro_administrador via id_usuario
-  registro_administradors!: registro_administrador[];
-  getRegistro_administradors!: Sequelize.HasManyGetAssociationsMixin<registro_administrador>;
-  setRegistro_administradors!: Sequelize.HasManySetAssociationsMixin<registro_administrador, registro_administradorId>;
-  addRegistro_administrador!: Sequelize.HasManyAddAssociationMixin<registro_administrador, registro_administradorId>;
-  addRegistro_administradors!: Sequelize.HasManyAddAssociationsMixin<registro_administrador, registro_administradorId>;
-  createRegistro_administrador!: Sequelize.HasManyCreateAssociationMixin<registro_administrador>;
-  removeRegistro_administrador!: Sequelize.HasManyRemoveAssociationMixin<registro_administrador, registro_administradorId>;
-  removeRegistro_administradors!: Sequelize.HasManyRemoveAssociationsMixin<registro_administrador, registro_administradorId>;
-  hasRegistro_administrador!: Sequelize.HasManyHasAssociationMixin<registro_administrador, registro_administradorId>;
-  hasRegistro_administradors!: Sequelize.HasManyHasAssociationsMixin<registro_administrador, registro_administradorId>;
-  countRegistro_administradors!: Sequelize.HasManyCountAssociationsMixin;
+  // administrador hasMany registroeventos via administrador_id
+  registroeventos!: registroeventos[];
+  getRegistroeventos!: Sequelize.HasManyGetAssociationsMixin<registroeventos>;
+  setRegistroeventos!: Sequelize.HasManySetAssociationsMixin<registroeventos, registroeventosId>;
+  addRegistroevento!: Sequelize.HasManyAddAssociationMixin<registroeventos, registroeventosId>;
+  addRegistroeventos!: Sequelize.HasManyAddAssociationsMixin<registroeventos, registroeventosId>;
+  createRegistroevento!: Sequelize.HasManyCreateAssociationMixin<registroeventos>;
+  removeRegistroevento!: Sequelize.HasManyRemoveAssociationMixin<registroeventos, registroeventosId>;
+  removeRegistroeventos!: Sequelize.HasManyRemoveAssociationsMixin<registroeventos, registroeventosId>;
+  hasRegistroevento!: Sequelize.HasManyHasAssociationMixin<registroeventos, registroeventosId>;
+  hasRegistroeventos!: Sequelize.HasManyHasAssociationsMixin<registroeventos, registroeventosId>;
+  countRegistroeventos!: Sequelize.HasManyCountAssociationsMixin;
   // administrador belongsTo roles via id_rol
   id_rol_role!: roles;
   getId_rol_role!: Sequelize.BelongsToGetAssociationMixin<roles>;
@@ -92,12 +96,12 @@ export class administrador extends Model<administradorAttributes, administradorC
     },
     celular: {
       type: DataTypes.STRING(255),
-      allowNull: true,
+      allowNull: false,
       defaultValue: "No Definido"
     },
     telefono: {
       type: DataTypes.STRING(255),
-      allowNull: true,
+      allowNull: false,
       defaultValue: "No Definido"
     },
     id_rol: {
@@ -123,6 +127,16 @@ export class administrador extends Model<administradorAttributes, administradorC
       type: DataTypes.BOOLEAN,
       allowNull: true,
       defaultValue: 0
+    },
+    foto: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      defaultValue: "\/uploads\/avatar\/default.png"
+    },
+    email: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+      defaultValue: "No Definido"
     }
   }, {
     sequelize,

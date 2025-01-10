@@ -16,6 +16,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json()) //para poder recibir datos por el body
 app.use(express.urlencoded({ extended: true })); // Para permitir el envío de datos por formulario
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use(routes)
 app.listen(PORT,() => console.log(`Escuchando ${PORT}`)) //escucha el puerto e informa
 

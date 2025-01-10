@@ -3,7 +3,6 @@ import { DataTypes, Model, Optional } from 'sequelize';
 import type { beca, becaId } from './beca';
 import type { colegio, colegioId } from './colegio';
 import type { red_colegio, red_colegioId } from './red_colegio';
-import type { registro_red, registro_redId } from './registro_red';
 
 export interface redAttributes {
   id: number;
@@ -65,18 +64,6 @@ export class red extends Model<redAttributes, redCreationAttributes> implements 
   hasRed_colegio!: Sequelize.HasManyHasAssociationMixin<red_colegio, red_colegioId>;
   hasRed_colegios!: Sequelize.HasManyHasAssociationsMixin<red_colegio, red_colegioId>;
   countRed_colegios!: Sequelize.HasManyCountAssociationsMixin;
-  // red hasMany registro_red via id_red
-  registro_reds!: registro_red[];
-  getRegistro_reds!: Sequelize.HasManyGetAssociationsMixin<registro_red>;
-  setRegistro_reds!: Sequelize.HasManySetAssociationsMixin<registro_red, registro_redId>;
-  addRegistro_red!: Sequelize.HasManyAddAssociationMixin<registro_red, registro_redId>;
-  addRegistro_reds!: Sequelize.HasManyAddAssociationsMixin<registro_red, registro_redId>;
-  createRegistro_red!: Sequelize.HasManyCreateAssociationMixin<registro_red>;
-  removeRegistro_red!: Sequelize.HasManyRemoveAssociationMixin<registro_red, registro_redId>;
-  removeRegistro_reds!: Sequelize.HasManyRemoveAssociationsMixin<registro_red, registro_redId>;
-  hasRegistro_red!: Sequelize.HasManyHasAssociationMixin<registro_red, registro_redId>;
-  hasRegistro_reds!: Sequelize.HasManyHasAssociationsMixin<registro_red, registro_redId>;
-  countRegistro_reds!: Sequelize.HasManyCountAssociationsMixin;
 
   static initModel(sequelize: Sequelize.Sequelize): typeof red {
     return red.init({
@@ -97,7 +84,8 @@ export class red extends Model<redAttributes, redCreationAttributes> implements 
     },
     foto: {
       type: DataTypes.STRING(255),
-      allowNull: true
+      allowNull: true,
+      defaultValue: "\/uploads\/redes\/default.png"
     },
     porcentaje: {
       type: DataTypes.DECIMAL(5,2),

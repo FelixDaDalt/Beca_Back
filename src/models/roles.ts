@@ -1,6 +1,7 @@
 import * as Sequelize from 'sequelize';
 import { DataTypes, Model, Optional } from 'sequelize';
 import type { administrador, administradorId } from './administrador';
+import type { registroeventos, registroeventosId } from './registroeventos';
 import type { usuario, usuarioId } from './usuario';
 
 export interface rolesAttributes {
@@ -28,6 +29,18 @@ export class roles extends Model<rolesAttributes, rolesCreationAttributes> imple
   hasAdministrador!: Sequelize.HasManyHasAssociationMixin<administrador, administradorId>;
   hasAdministradors!: Sequelize.HasManyHasAssociationsMixin<administrador, administradorId>;
   countAdministradors!: Sequelize.HasManyCountAssociationsMixin;
+  // roles hasMany registroeventos via id_rol
+  registroeventos!: registroeventos[];
+  getRegistroeventos!: Sequelize.HasManyGetAssociationsMixin<registroeventos>;
+  setRegistroeventos!: Sequelize.HasManySetAssociationsMixin<registroeventos, registroeventosId>;
+  addRegistroevento!: Sequelize.HasManyAddAssociationMixin<registroeventos, registroeventosId>;
+  addRegistroeventos!: Sequelize.HasManyAddAssociationsMixin<registroeventos, registroeventosId>;
+  createRegistroevento!: Sequelize.HasManyCreateAssociationMixin<registroeventos>;
+  removeRegistroevento!: Sequelize.HasManyRemoveAssociationMixin<registroeventos, registroeventosId>;
+  removeRegistroeventos!: Sequelize.HasManyRemoveAssociationsMixin<registroeventos, registroeventosId>;
+  hasRegistroevento!: Sequelize.HasManyHasAssociationMixin<registroeventos, registroeventosId>;
+  hasRegistroeventos!: Sequelize.HasManyHasAssociationsMixin<registroeventos, registroeventosId>;
+  countRegistroeventos!: Sequelize.HasManyCountAssociationsMixin;
   // roles hasMany usuario via id_rol
   usuarios!: usuario[];
   getUsuarios!: Sequelize.HasManyGetAssociationsMixin<usuario>;

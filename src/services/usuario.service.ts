@@ -334,5 +334,84 @@ const obtenerUsuario = async (idUsuario:string) => {
     }
 };
 
+const editar = async (update:usuario, idUsuario:number, idRol:number, transaction:Transaction,idColegio?:number) => {
+    try {
 
-export{cambiarPassword,aceptarTyc,obtenerTyc,suspender,resetarPass,obtenerUsuario,borrar }
+        if(idRol > 1 && update.id != idUsuario){
+            const error = new Error('No puedes editar otro usuario');
+            (error as any).statusCode = 400; 
+            throw error;
+        }
+
+        const usuarioExistente = await usuario.findOne({
+            where:{
+                id:update.id,
+                borrado:0
+            }
+        })
+
+        if(!usuarioExistente){
+            const error = new Error('El Usuario no existe');
+            (error as any).statusCode = 400; 
+            throw error;
+        }
+
+        if(idRol == 1 && usuarioExistente.id_colegio != idColegio){
+            const error = new Error('No puedes editar el usuario de otro colegio');
+            (error as any).statusCode = 400; 
+            throw error;
+        }
+
+        const estadoAnterior = { ...usuarioExistente.toJSON() };
+
+        await usuario.update(update, {
+            where: { id: update.id },
+            transaction,
+        });
+
+        // 4. Retornar
+        return update
+
+    } catch (error) {
+        throw error;
+    }
+};
+
+const me = async (idUsuario:string) => {
+    try {
+
+        const usuarioExistente = await usuario.findOne({
+            where:[{
+                id:idUsuario,
+                borrado:0
+            }],
+            attributes:{exclude:['borrado','password']},
+            include:[{
+                model:colegio,
+                as:'id_colegio_colegio',
+                required:false,
+                attributes:['id','nombre','cuit','foto']
+            },{
+               
+                    model:roles,
+                    as:'id_rol_role',
+                    required:false,
+                    attributes:['descripcion']
+            }]
+        });
+
+        if (!usuarioExistente) {
+            const error = new Error('Usuario inexistente');
+            (error as any).statusCode = 400;
+            throw error;
+        }
+
+        return usuarioExistente
+        
+    } catch (error) {
+        throw error;
+    }
+};
+
+
+export{cambiarPassword,aceptarTyc,obtenerTyc,suspender,resetarPass,obtenerUsuario,borrar,editar,me }

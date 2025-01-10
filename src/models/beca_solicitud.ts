@@ -1,6 +1,7 @@
 import * as Sequelize from 'sequelize';
 import { DataTypes, Model, Optional } from 'sequelize';
 import type { beca, becaId } from './beca';
+import type { beca_estado, beca_estadoId } from './beca_estado';
 import type { beca_resolucion, beca_resolucionId } from './beca_resolucion';
 import type { colegio, colegioId } from './colegio';
 import type { usuario, usuarioId } from './usuario';
@@ -20,11 +21,12 @@ export interface beca_solicitudAttributes {
   res_comentario?: string;
   id_usuario_reso?: number;
   reso_fecha_hora?: Date;
+  id_estado: number;
 }
 
 export type beca_solicitudPk = "id";
 export type beca_solicitudId = beca_solicitud[beca_solicitudPk];
-export type beca_solicitudOptionalAttributes = "id" | "fecha_hora" | "detalle" | "id_resolucion" | "res_comentario" | "id_usuario_reso" | "reso_fecha_hora";
+export type beca_solicitudOptionalAttributes = "id" | "fecha_hora" | "detalle" | "id_resolucion" | "res_comentario" | "id_usuario_reso" | "reso_fecha_hora" | "id_estado";
 export type beca_solicitudCreationAttributes = Optional<beca_solicitudAttributes, beca_solicitudOptionalAttributes>;
 
 export class beca_solicitud extends Model<beca_solicitudAttributes, beca_solicitudCreationAttributes> implements beca_solicitudAttributes {
@@ -42,12 +44,18 @@ export class beca_solicitud extends Model<beca_solicitudAttributes, beca_solicit
   res_comentario?: string;
   id_usuario_reso?: number;
   reso_fecha_hora?: Date;
+  id_estado!: number;
 
   // beca_solicitud belongsTo beca via id_beca
   id_beca_beca!: beca;
   getId_beca_beca!: Sequelize.BelongsToGetAssociationMixin<beca>;
   setId_beca_beca!: Sequelize.BelongsToSetAssociationMixin<beca, becaId>;
   createId_beca_beca!: Sequelize.BelongsToCreateAssociationMixin<beca>;
+  // beca_solicitud belongsTo beca_estado via id_estado
+  id_estado_beca_estado!: beca_estado;
+  getId_estado_beca_estado!: Sequelize.BelongsToGetAssociationMixin<beca_estado>;
+  setId_estado_beca_estado!: Sequelize.BelongsToSetAssociationMixin<beca_estado, beca_estadoId>;
+  createId_estado_beca_estado!: Sequelize.BelongsToCreateAssociationMixin<beca_estado>;
   // beca_solicitud belongsTo beca_resolucion via id_resolucion
   id_resolucion_beca_resolucion!: beca_resolucion;
   getId_resolucion_beca_resolucion!: Sequelize.BelongsToGetAssociationMixin<beca_resolucion>;
@@ -151,6 +159,15 @@ export class beca_solicitud extends Model<beca_solicitudAttributes, beca_solicit
       type: DataTypes.DATE,
       allowNull: true,
       defaultValue: Sequelize.Sequelize.fn('current_timestamp')
+    },
+    id_estado: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+      references: {
+        model: 'beca_estado',
+        key: 'id'
+      }
     }
   }, {
     sequelize,
@@ -198,6 +215,13 @@ export class beca_solicitud extends Model<beca_solicitudAttributes, beca_solicit
         using: "BTREE",
         fields: [
           { name: "id_usuario_reso" },
+        ]
+      },
+      {
+        name: "fk_beca_solicitud_beca_estado",
+        using: "BTREE",
+        fields: [
+          { name: "id_estado" },
         ]
       },
     ]

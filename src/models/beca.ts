@@ -1,8 +1,9 @@
 import * as Sequelize from 'sequelize';
 import { DataTypes, Model, Optional } from 'sequelize';
-import type { beca_estado, beca_estadoId } from './beca_estado';
 import type { beca_solicitud, beca_solicitudId } from './beca_solicitud';
+import type { colegio, colegioId } from './colegio';
 import type { red, redId } from './red';
+import type { usuario, usuarioId } from './usuario';
 
 export interface becaAttributes {
   id: number;
@@ -10,8 +11,8 @@ export interface becaAttributes {
   id_colegio: number;
   fecha_hora: Date;
   id_usuario: number;
-  id_estado: number;
   borrado?: number;
+  cantidad: number;
 }
 
 export type becaPk = "id";
@@ -25,8 +26,8 @@ export class beca extends Model<becaAttributes, becaCreationAttributes> implemen
   id_colegio!: number;
   fecha_hora!: Date;
   id_usuario!: number;
-  id_estado!: number;
   borrado?: number;
+  cantidad!: number;
 
   // beca hasMany beca_solicitud via id_beca
   beca_solicituds!: beca_solicitud[];
@@ -40,16 +41,21 @@ export class beca extends Model<becaAttributes, becaCreationAttributes> implemen
   hasBeca_solicitud!: Sequelize.HasManyHasAssociationMixin<beca_solicitud, beca_solicitudId>;
   hasBeca_solicituds!: Sequelize.HasManyHasAssociationsMixin<beca_solicitud, beca_solicitudId>;
   countBeca_solicituds!: Sequelize.HasManyCountAssociationsMixin;
-  // beca belongsTo beca_estado via id_estado
-  id_estado_beca_estado!: beca_estado;
-  getId_estado_beca_estado!: Sequelize.BelongsToGetAssociationMixin<beca_estado>;
-  setId_estado_beca_estado!: Sequelize.BelongsToSetAssociationMixin<beca_estado, beca_estadoId>;
-  createId_estado_beca_estado!: Sequelize.BelongsToCreateAssociationMixin<beca_estado>;
+  // beca belongsTo colegio via id_colegio
+  id_colegio_colegio!: colegio;
+  getId_colegio_colegio!: Sequelize.BelongsToGetAssociationMixin<colegio>;
+  setId_colegio_colegio!: Sequelize.BelongsToSetAssociationMixin<colegio, colegioId>;
+  createId_colegio_colegio!: Sequelize.BelongsToCreateAssociationMixin<colegio>;
   // beca belongsTo red via id_red
   id_red_red!: red;
   getId_red_red!: Sequelize.BelongsToGetAssociationMixin<red>;
   setId_red_red!: Sequelize.BelongsToSetAssociationMixin<red, redId>;
   createId_red_red!: Sequelize.BelongsToCreateAssociationMixin<red>;
+  // beca belongsTo usuario via id_usuario
+  id_usuario_usuario!: usuario;
+  getId_usuario_usuario!: Sequelize.BelongsToGetAssociationMixin<usuario>;
+  setId_usuario_usuario!: Sequelize.BelongsToSetAssociationMixin<usuario, usuarioId>;
+  createId_usuario_usuario!: Sequelize.BelongsToCreateAssociationMixin<usuario>;
 
   static initModel(sequelize: Sequelize.Sequelize): typeof beca {
     return beca.init({
@@ -69,7 +75,11 @@ export class beca extends Model<becaAttributes, becaCreationAttributes> implemen
     },
     id_colegio: {
       type: DataTypes.INTEGER,
-      allowNull: false
+      allowNull: false,
+      references: {
+        model: 'colegio',
+        key: 'id'
+      }
     },
     fecha_hora: {
       type: DataTypes.DATE,
@@ -78,13 +88,9 @@ export class beca extends Model<becaAttributes, becaCreationAttributes> implemen
     },
     id_usuario: {
       type: DataTypes.INTEGER,
-      allowNull: false
-    },
-    id_estado: {
-      type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: 'beca_estado',
+        model: 'usuario',
         key: 'id'
       }
     },
@@ -92,6 +98,10 @@ export class beca extends Model<becaAttributes, becaCreationAttributes> implemen
       type: DataTypes.BOOLEAN,
       allowNull: true,
       defaultValue: 0
+    },
+    cantidad: {
+      type: DataTypes.INTEGER,
+      allowNull: false
     }
   }, {
     sequelize,
@@ -114,10 +124,17 @@ export class beca extends Model<becaAttributes, becaCreationAttributes> implemen
         ]
       },
       {
-        name: "beca_a_beca_estado",
+        name: "beca_a_colegio",
         using: "BTREE",
         fields: [
-          { name: "id_estado" },
+          { name: "id_colegio" },
+        ]
+      },
+      {
+        name: "beca_a_usuario",
+        using: "BTREE",
+        fields: [
+          { name: "id_usuario" },
         ]
       },
     ]

@@ -1,7 +1,7 @@
 import { Request, Response } from "express"
 import { handleHttp } from "../utils/error.handle"
 import { RequestExt } from "../middleware/session"
-import { listadoRegistros, listadoRegistrosAdmin } from "../services/registro.service"
+import { registrosAdmin, registrosPorColegio } from "../services/registro.service"
 
 
 
@@ -13,7 +13,7 @@ const ObtenerRegistros = async (req:RequestExt,res:Response)=>{
             idColegio = req.user?.id_colegio;
         }
 
-        const listado = await listadoRegistros(idColegio as string);
+        const listado = await registrosPorColegio(idColegio as string, idRol);
         const data = {"data":listado,"mensaje":"Registro obtenidos"}
         res.status(200).send(data);
     }catch(e){
@@ -21,9 +21,9 @@ const ObtenerRegistros = async (req:RequestExt,res:Response)=>{
     }
 }
 
-const ObtenerRegistrosAdministrador = async (req:RequestExt,res:Response)=>{
+const ObtenerRegistrosAdmin= async (req:RequestExt,res:Response)=>{
     try{
-        const listado = await listadoRegistrosAdmin();
+        const listado = await registrosAdmin();
         const data = {"data":listado,"mensaje":"Registro obtenidos"}
         res.status(200).send(data);
     }catch(e){
@@ -33,4 +33,4 @@ const ObtenerRegistrosAdministrador = async (req:RequestExt,res:Response)=>{
 
 
 
-export {ObtenerRegistros,ObtenerRegistrosAdministrador}
+export {ObtenerRegistros,ObtenerRegistrosAdmin}

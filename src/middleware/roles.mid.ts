@@ -6,8 +6,7 @@ const verificarRoles = (rolesPermitidos: number[]) => {
     return (req: RequestExt, res: Response, next: NextFunction): void => {
         try {
             const userRole = req.user?.id_rol;
-            console.log('Rol del usuario:', userRole); // Agrega logs para depuración
-            console.log('Roles permitidos:', rolesPermitidos);
+
 
             if (userRole === undefined) {
                 handleHttp(res, 'Error de autenticación', { statusCode: 401, message: 'Usuario no autenticado.' });

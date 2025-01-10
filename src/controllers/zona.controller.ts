@@ -3,7 +3,8 @@ import { handleHttp } from "../utils/error.handle"
 import { RequestExt } from "../middleware/session"
 import { actualizarLocalidad, actualizarZona, borrarLocalidad, borrarZona, nuevaLocalidad, nuevaZona, obtenerZonas } from "../services/zona.service"
 import sequelize from "../config/database"
-import { registrarActividad } from "../services/registro.service"
+import requestIp from 'request-ip';
+import { registrarEvento } from "../services/registro.service"
 
 
 const ObtenerZonas = async (req:RequestExt,res:Response)=>{
@@ -21,12 +22,22 @@ const NuevaZona = async (req: RequestExt, res: Response) => {
     try {
        
         const zona = await nuevaZona(req.body, transaction);
-        const data = { "data": zona, "mensaje": "Zona creada" };
+        const data = { "data": zona, "mensaje": "Zona dada de alta" };
 
-        const idAdmin = req.user?.id;
+
+        const idUsuario = req.user?.id;
         const idRol = req.user?.id_rol;
-        const descripcionRegistro = `Creación de nueva zona: ${zona.nombre} (ID: ${zona.id})`;
-        await registrarActividad(idAdmin, idRol, descripcionRegistro, transaction);
+        await registrarEvento(
+            idUsuario,
+            idRol,
+            8,
+            zona.id,
+            "Alta",
+            data.mensaje,
+            requestIp.getClientIp(req) || 'No Disponible',
+            req.headers['user-agent'] || 'No Disponible',
+            transaction
+        );
 
         await transaction.commit();
         res.status(200).send(data);
@@ -41,12 +52,21 @@ const NuevaLocalidad = async (req: RequestExt, res: Response) => {
     try {
        
         const localidad = await nuevaLocalidad(req.body, transaction);
-        const data = { "data": localidad, "mensaje": "Localidad creada" };
+        const data = { "data": localidad, "mensaje": "Localidad dada de alta" };
 
-        const idAdmin = req.user?.id;
+        const idUsuario = req.user?.id;
         const idRol = req.user?.id_rol;
-        const descripcionRegistro = `Creación de nueva localidad: ${localidad.nombre} (ID: ${localidad.id})`;
-        await registrarActividad(idAdmin, idRol, descripcionRegistro, transaction);
+        await registrarEvento(
+            idUsuario,
+            idRol,
+            7,
+            localidad.id,
+            "Alta",
+            data.mensaje,
+            requestIp.getClientIp(req) || 'No Disponible',
+            req.headers['user-agent'] || 'No Disponible',
+            transaction
+        );
 
         await transaction.commit();
         res.status(200).send(data);
@@ -62,10 +82,19 @@ const ActualizarLocalidad = async (req: RequestExt, res: Response) => {
         const localidad = await actualizarLocalidad(req.body, transaction);
         const data = { "data": localidad, "mensaje": "Localidad Actualizada" };
 
-        const idAdmin = req.user?.id;
+        const idUsuario = req.user?.id;
         const idRol = req.user?.id_rol;
-        const descripcionRegistro = `Actualización de localidad: ${localidad.nombre} (ID: ${localidad.id})`;
-        await registrarActividad(idAdmin, idRol, descripcionRegistro, transaction);
+        await registrarEvento(
+            idUsuario,
+            idRol,
+            7,
+            localidad.id,
+            "Actualizar",
+            data.mensaje,
+            requestIp.getClientIp(req) || 'No Disponible',
+            req.headers['user-agent'] || 'No Disponible',
+            transaction
+        );
 
         await transaction.commit();
         res.status(200).send(data);
@@ -82,10 +111,20 @@ const ActualizarZona = async (req: RequestExt, res: Response) => {
         const zona = await actualizarZona(req.body, transaction);
         const data = { "data": zona, "mensaje": "Zona Actualizada" };
 
-        const idAdmin = req.user?.id;
+        const idUsuario = req.user?.id;
         const idRol = req.user?.id_rol;
-        const descripcionRegistro = `Actualización de zona: ${zona.nombre} (ID: ${zona.id})`;
-        await registrarActividad(idAdmin, idRol, descripcionRegistro, transaction);
+
+        await registrarEvento(
+            idUsuario,
+            idRol,
+            8,
+            zona.id,
+            "Actualizar",
+            data.mensaje,
+            requestIp.getClientIp(req) || 'No Disponible',
+            req.headers['user-agent'] || 'No Disponible',
+            transaction
+        );
 
         await transaction.commit();
         res.status(200).send(data);
@@ -102,10 +141,20 @@ const BorrarZona = async (req: RequestExt, res: Response) => {
         const zona = await borrarZona(id as string, transaction);
         const data = { "data": zona, "mensaje": "Zona eliminada" };
 
-        const idAdmin = req.user?.id;
+        const idUsuario = req.user?.id;
         const idRol = req.user?.id_rol;
-        const descripcionRegistro = `Eliminación de zona: ${zona.nombre} (ID: ${id})`;
-        await registrarActividad(idAdmin, idRol, descripcionRegistro, transaction);
+
+        await registrarEvento(
+            idUsuario,
+            idRol,
+            8,
+            zona.id,
+            "Borrar",
+            data.mensaje,
+            requestIp.getClientIp(req) || 'No Disponible',
+            req.headers['user-agent'] || 'No Disponible',
+            transaction
+        );
 
         await transaction.commit();
         res.status(200).send(data);
@@ -122,10 +171,20 @@ const BorrarLocalidad = async (req: RequestExt, res: Response) => {
         const localidad = await borrarLocalidad(id as string, transaction);
         const data = { "data": localidad, "mensaje": "Localidad eliminada" };
 
-        const idAdmin = req.user?.id;
+        const idUsuario = req.user?.id;
         const idRol = req.user?.id_rol;
-        const descripcionRegistro = `Eliminación de localidad: ${localidad.nombre} (ID: ${id})`;
-        await registrarActividad(idAdmin, idRol, descripcionRegistro, transaction);
+
+        await registrarEvento(
+            idUsuario,
+            idRol,
+            7,
+            localidad.id,
+            "Borrar",
+            data.mensaje,
+            requestIp.getClientIp(req) || 'No Disponible',
+            req.headers['user-agent'] || 'No Disponible',
+            transaction
+        );
 
         await transaction.commit();
         res.status(200).send(data);

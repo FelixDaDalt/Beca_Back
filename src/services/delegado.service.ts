@@ -30,7 +30,8 @@ const altaDelegado = async (idColegio:number, nuevoDelegado: usuario,transaction
 
         // 3. Agregar el delegado
         nuevoDelegado.id_rol = 2;
-        nuevoDelegado.id_colegio = idColegio; 
+        nuevoDelegado.id_colegio = idColegio;
+        nuevoDelegado.cambiarPass = 1; 
         const agregarDelegado = await usuario.create(nuevoDelegado, { transaction }); // Incluye la transacción
 
         // 5. Devolver el token y los datos del usuario al cliente

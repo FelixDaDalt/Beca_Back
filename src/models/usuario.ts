@@ -1,11 +1,10 @@
 import * as Sequelize from 'sequelize';
 import { DataTypes, Model, Optional } from 'sequelize';
+import type { beca, becaId } from './beca';
 import type { beca_solicitud, beca_solicitudId } from './beca_solicitud';
 import type { colegio, colegioId } from './colegio';
 import type { ingresos_usuarios, ingresos_usuariosId } from './ingresos_usuarios';
-import type { registro_autorizado, registro_autorizadoId } from './registro_autorizado';
-import type { registro_delegado, registro_delegadoId } from './registro_delegado';
-import type { registro_responsable, registro_responsableId } from './registro_responsable';
+import type { registroeventos, registroeventosId } from './registroeventos';
 import type { roles, rolesId } from './roles';
 
 export interface usuarioAttributes {
@@ -23,11 +22,12 @@ export interface usuarioAttributes {
   tyc?: number;
   suspendido?: number;
   borrado?: number;
+  foto?: string;
 }
 
 export type usuarioPk = "id";
 export type usuarioId = usuario[usuarioPk];
-export type usuarioOptionalAttributes = "id" | "telefono" | "celular" | "email" | "cambiarPass" | "tyc" | "suspendido" | "borrado";
+export type usuarioOptionalAttributes = "id" | "telefono" | "celular" | "email" | "cambiarPass" | "tyc" | "suspendido" | "borrado" | "foto";
 export type usuarioCreationAttributes = Optional<usuarioAttributes, usuarioOptionalAttributes>;
 
 export class usuario extends Model<usuarioAttributes, usuarioCreationAttributes> implements usuarioAttributes {
@@ -45,6 +45,7 @@ export class usuario extends Model<usuarioAttributes, usuarioCreationAttributes>
   tyc?: number;
   suspendido?: number;
   borrado?: number;
+  foto?: string;
 
   // usuario belongsTo colegio via id_colegio
   id_colegio_colegio!: colegio;
@@ -56,6 +57,18 @@ export class usuario extends Model<usuarioAttributes, usuarioCreationAttributes>
   getId_rol_role!: Sequelize.BelongsToGetAssociationMixin<roles>;
   setId_rol_role!: Sequelize.BelongsToSetAssociationMixin<roles, rolesId>;
   createId_rol_role!: Sequelize.BelongsToCreateAssociationMixin<roles>;
+  // usuario hasMany beca via id_usuario
+  becas!: beca[];
+  getBecas!: Sequelize.HasManyGetAssociationsMixin<beca>;
+  setBecas!: Sequelize.HasManySetAssociationsMixin<beca, becaId>;
+  addBeca!: Sequelize.HasManyAddAssociationMixin<beca, becaId>;
+  addBecas!: Sequelize.HasManyAddAssociationsMixin<beca, becaId>;
+  createBeca!: Sequelize.HasManyCreateAssociationMixin<beca>;
+  removeBeca!: Sequelize.HasManyRemoveAssociationMixin<beca, becaId>;
+  removeBecas!: Sequelize.HasManyRemoveAssociationsMixin<beca, becaId>;
+  hasBeca!: Sequelize.HasManyHasAssociationMixin<beca, becaId>;
+  hasBecas!: Sequelize.HasManyHasAssociationsMixin<beca, becaId>;
+  countBecas!: Sequelize.HasManyCountAssociationsMixin;
   // usuario hasMany beca_solicitud via id_usuario_solic
   beca_solicituds!: beca_solicitud[];
   getBeca_solicituds!: Sequelize.HasManyGetAssociationsMixin<beca_solicitud>;
@@ -92,42 +105,18 @@ export class usuario extends Model<usuarioAttributes, usuarioCreationAttributes>
   hasIngresos_usuario!: Sequelize.HasManyHasAssociationMixin<ingresos_usuarios, ingresos_usuariosId>;
   hasIngresos_usuarios!: Sequelize.HasManyHasAssociationsMixin<ingresos_usuarios, ingresos_usuariosId>;
   countIngresos_usuarios!: Sequelize.HasManyCountAssociationsMixin;
-  // usuario hasMany registro_autorizado via id_usuario
-  registro_autorizados!: registro_autorizado[];
-  getRegistro_autorizados!: Sequelize.HasManyGetAssociationsMixin<registro_autorizado>;
-  setRegistro_autorizados!: Sequelize.HasManySetAssociationsMixin<registro_autorizado, registro_autorizadoId>;
-  addRegistro_autorizado!: Sequelize.HasManyAddAssociationMixin<registro_autorizado, registro_autorizadoId>;
-  addRegistro_autorizados!: Sequelize.HasManyAddAssociationsMixin<registro_autorizado, registro_autorizadoId>;
-  createRegistro_autorizado!: Sequelize.HasManyCreateAssociationMixin<registro_autorizado>;
-  removeRegistro_autorizado!: Sequelize.HasManyRemoveAssociationMixin<registro_autorizado, registro_autorizadoId>;
-  removeRegistro_autorizados!: Sequelize.HasManyRemoveAssociationsMixin<registro_autorizado, registro_autorizadoId>;
-  hasRegistro_autorizado!: Sequelize.HasManyHasAssociationMixin<registro_autorizado, registro_autorizadoId>;
-  hasRegistro_autorizados!: Sequelize.HasManyHasAssociationsMixin<registro_autorizado, registro_autorizadoId>;
-  countRegistro_autorizados!: Sequelize.HasManyCountAssociationsMixin;
-  // usuario hasMany registro_delegado via id_usuario
-  registro_delegados!: registro_delegado[];
-  getRegistro_delegados!: Sequelize.HasManyGetAssociationsMixin<registro_delegado>;
-  setRegistro_delegados!: Sequelize.HasManySetAssociationsMixin<registro_delegado, registro_delegadoId>;
-  addRegistro_delegado!: Sequelize.HasManyAddAssociationMixin<registro_delegado, registro_delegadoId>;
-  addRegistro_delegados!: Sequelize.HasManyAddAssociationsMixin<registro_delegado, registro_delegadoId>;
-  createRegistro_delegado!: Sequelize.HasManyCreateAssociationMixin<registro_delegado>;
-  removeRegistro_delegado!: Sequelize.HasManyRemoveAssociationMixin<registro_delegado, registro_delegadoId>;
-  removeRegistro_delegados!: Sequelize.HasManyRemoveAssociationsMixin<registro_delegado, registro_delegadoId>;
-  hasRegistro_delegado!: Sequelize.HasManyHasAssociationMixin<registro_delegado, registro_delegadoId>;
-  hasRegistro_delegados!: Sequelize.HasManyHasAssociationsMixin<registro_delegado, registro_delegadoId>;
-  countRegistro_delegados!: Sequelize.HasManyCountAssociationsMixin;
-  // usuario hasMany registro_responsable via id_usuario
-  registro_responsables!: registro_responsable[];
-  getRegistro_responsables!: Sequelize.HasManyGetAssociationsMixin<registro_responsable>;
-  setRegistro_responsables!: Sequelize.HasManySetAssociationsMixin<registro_responsable, registro_responsableId>;
-  addRegistro_responsable!: Sequelize.HasManyAddAssociationMixin<registro_responsable, registro_responsableId>;
-  addRegistro_responsables!: Sequelize.HasManyAddAssociationsMixin<registro_responsable, registro_responsableId>;
-  createRegistro_responsable!: Sequelize.HasManyCreateAssociationMixin<registro_responsable>;
-  removeRegistro_responsable!: Sequelize.HasManyRemoveAssociationMixin<registro_responsable, registro_responsableId>;
-  removeRegistro_responsables!: Sequelize.HasManyRemoveAssociationsMixin<registro_responsable, registro_responsableId>;
-  hasRegistro_responsable!: Sequelize.HasManyHasAssociationMixin<registro_responsable, registro_responsableId>;
-  hasRegistro_responsables!: Sequelize.HasManyHasAssociationsMixin<registro_responsable, registro_responsableId>;
-  countRegistro_responsables!: Sequelize.HasManyCountAssociationsMixin;
+  // usuario hasMany registroeventos via usuario_id
+  registroeventos!: registroeventos[];
+  getRegistroeventos!: Sequelize.HasManyGetAssociationsMixin<registroeventos>;
+  setRegistroeventos!: Sequelize.HasManySetAssociationsMixin<registroeventos, registroeventosId>;
+  addRegistroevento!: Sequelize.HasManyAddAssociationMixin<registroeventos, registroeventosId>;
+  addRegistroeventos!: Sequelize.HasManyAddAssociationsMixin<registroeventos, registroeventosId>;
+  createRegistroevento!: Sequelize.HasManyCreateAssociationMixin<registroeventos>;
+  removeRegistroevento!: Sequelize.HasManyRemoveAssociationMixin<registroeventos, registroeventosId>;
+  removeRegistroeventos!: Sequelize.HasManyRemoveAssociationsMixin<registroeventos, registroeventosId>;
+  hasRegistroevento!: Sequelize.HasManyHasAssociationMixin<registroeventos, registroeventosId>;
+  hasRegistroeventos!: Sequelize.HasManyHasAssociationsMixin<registroeventos, registroeventosId>;
+  countRegistroeventos!: Sequelize.HasManyCountAssociationsMixin;
 
   static initModel(sequelize: Sequelize.Sequelize): typeof usuario {
     return usuario.init({
@@ -203,6 +192,11 @@ export class usuario extends Model<usuarioAttributes, usuarioCreationAttributes>
       type: DataTypes.BOOLEAN,
       allowNull: true,
       defaultValue: 0
+    },
+    foto: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      defaultValue: "\/uploads\/avatar\/default.png"
     }
   }, {
     sequelize,

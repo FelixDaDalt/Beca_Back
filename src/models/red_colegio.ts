@@ -15,11 +15,12 @@ export interface red_colegioAttributes {
   bsp?: number;
   bsa?: number;
   bde?: number;
+  borrado?: number;
 }
 
 export type red_colegioPk = "id_colegio" | "id_red";
 export type red_colegioId = red_colegio[red_colegioPk];
-export type red_colegioOptionalAttributes = "anfitrion" | "bp" | "btp" | "db" | "dbu" | "dbd" | "bsp" | "bsa" | "bde";
+export type red_colegioOptionalAttributes = "anfitrion" | "bp" | "btp" | "db" | "dbu" | "dbd" | "bsp" | "bsa" | "bde" | "borrado";
 export type red_colegioCreationAttributes = Optional<red_colegioAttributes, red_colegioOptionalAttributes>;
 
 export class red_colegio extends Model<red_colegioAttributes, red_colegioCreationAttributes> implements red_colegioAttributes {
@@ -34,6 +35,7 @@ export class red_colegio extends Model<red_colegioAttributes, red_colegioCreatio
   bsp?: number;
   bsa?: number;
   bde?: number;
+  borrado?: number;
 
   // red_colegio belongsTo colegio via id_colegio
   id_colegio_colegio!: colegio;
@@ -108,6 +110,11 @@ export class red_colegio extends Model<red_colegioAttributes, red_colegioCreatio
     },
     bde: {
       type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: 0
+    },
+    borrado: {
+      type: DataTypes.TINYINT,
       allowNull: true,
       defaultValue: 0
     }

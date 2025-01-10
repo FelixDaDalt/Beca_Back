@@ -4,6 +4,7 @@ import { colegio } from "../models/colegio"
 import { usuario } from "../models/usuario"
 import { tyc } from "../models/tyc"
 import { Op, Transaction } from "sequelize"
+import { roles } from "../models/roles"
 
 const altaAdministrador = async (nuevoAdmin: administrador, transaction: Transaction) => {
     try {
@@ -26,6 +27,7 @@ const altaAdministrador = async (nuevoAdmin: administrador, transaction: Transac
         // 2. Encriptar contraseña
         const passEncrypt = await encriptar(nuevoAdmin.password);
         nuevoAdmin.password = passEncrypt;
+        nuevoAdmin.cambiarPass = 1;
 
         // 3. Agregar el administrador
         const agregarAdmin = await administrador.create(nuevoAdmin, { transaction }); // Incluye la transacción
@@ -115,6 +117,19 @@ const borrarAdministrador = async (idRol:number, idUsuario:string, transaction:T
             throw error;
         }
 
+        const usuariosAdmin = await administrador.count({
+            where: {
+                id_rol: 0,
+                borrado: 0
+            }
+        });
+
+        if (usuariosAdmin === 1) {
+            const error = new Error('No se puede eliminar el único usuario Administrador');
+            (error as any).statusCode = 400;
+            throw error;
+        }
+
         // Cambiar estado de suspensión
         adminExistente.borrado = 1;
         
@@ -153,6 +168,73 @@ const obtenerAdministrador = async (idUsuario:string) => {
     }
 };
 
+const actualizar = async (update:administrador, idUsuario:number, transaction:Transaction) => {
+    try {
+
+        if(update.id != idUsuario){
+            const error = new Error('No puedes editar otro usuario');
+            (error as any).statusCode = 400; 
+            throw error;
+        }
+
+        const usuarioExistente = await administrador.findOne({
+            where:{
+                id:update.id,
+                borrado:0
+            }
+        })
+
+        if(!usuarioExistente){
+            const error = new Error('El Usuario no existe');
+            (error as any).statusCode = 400; 
+            throw error;
+        }
+
+        const estadoAnterior = { ...usuarioExistente.toJSON() };
+
+        await administrador.update(update, {
+            where: { id: update.id },
+            transaction,
+        });
+
+        // 4. Retornar
+        return update
+
+    } catch (error) {
+        throw error;
+    }
+};
+
+const me = async (idUsuario:string) => {
+    try {
+
+        const usuarioExistente = await administrador.findOne({
+            where:[{
+                id:idUsuario,
+                borrado:0
+            }],
+            attributes:{exclude:['borrado','password']},
+            include:[{
+                    model:roles,
+                    as:'id_rol_role',
+                    required:false,
+                    attributes:['descripcion']
+            }]
+        });
+
+        if (!usuarioExistente) {
+            const error = new Error('Usuario inexistente');
+            (error as any).statusCode = 400;
+            throw error;
+        }
+
+        return usuarioExistente
+        
+    } catch (error) {
+        throw error;
+    }
+}
+
 const comprobarDisponibilidad = async (cuit?: string, dni?: string, url?: string, dniAdmin?:string) => {
     try{
         let resultado: { disponible: boolean } = {disponible:false};
@@ -165,7 +247,6 @@ const comprobarDisponibilidad = async (cuit?: string, dni?: string, url?: string
     
         if (dni) {
             const findDni = await usuario.findOne({ where: { dni,borrado:0 } });
-            console.log(findDni)
             resultado.disponible = !findDni; // Si no existe, es disponible
             return resultado
         }
@@ -222,4 +303,4 @@ const listadoTyc = async () => {
     }
 };
 
-export{listadoTyc, nuevoTyc, altaAdministrador,comprobarDisponibilidad, listadoAdministradores,suspenderAdministrador, obtenerAdministrador, borrarAdministrador}
+export{listadoTyc, nuevoTyc, altaAdministrador,comprobarDisponibilidad, listadoAdministradores,suspenderAdministrador, obtenerAdministrador, borrarAdministrador,me,actualizar}

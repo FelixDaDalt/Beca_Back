@@ -1,0 +1,11 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.router = void 0;
+const express_1 = require("express");
+const session_1 = require("../middleware/session");
+const responsable_controller_1 = require("../controllers/responsable.controller");
+const roles_mid_1 = require("../middleware/roles.mid");
+const router = (0, express_1.Router)();
+exports.router = router;
+router.post('/alta', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([0]), responsable_controller_1.AltaResponsable);
+router.get('/listado', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([0, 1]), responsable_controller_1.ObtenerResponsables);

@@ -1,10 +1,10 @@
 import { Request, Response } from "express"
 import { handleHttp } from "../utils/error.handle"
-import { altaAdministrador,borrarAdministrador,comprobarDisponibilidad, listadoAdministradores, listadoTyc, nuevoTyc, obtenerAdministrador, suspenderAdministrador} from "../services/admin.service"
+import { altaAdministrador,borrarAdministrador,comprobarDisponibilidad, listadoAdministradores, listadoTyc, nuevoTyc, obtenerAdministrador, suspenderAdministrador,me, actualizar} from "../services/admin.service"
 import { RequestExt } from "../middleware/session"
-import { registrarActividad } from "../services/registro.service"
 import sequelize from "../config/database"
-
+import { registrarEvento } from "../services/registro.service"
+import requestIp from 'request-ip';
 
 //ADMINISTRADORES
 const AltaAdministrador = async (req:RequestExt,res:Response)=>{
@@ -13,10 +13,20 @@ const AltaAdministrador = async (req:RequestExt,res:Response)=>{
         const alta = await altaAdministrador(req.body,transaction)
         const data = {"data":alta,"mensaje":"Administrador dado de alta"}
 
-        const idusuario = req.user?.id
-        const idrol = req.user?.id_rol
-        const descripcionRegistro = `Alta de administrador DNI:  ${alta.dni} (ID: ${alta.id})`;
-        await registrarActividad(idusuario,idrol, descripcionRegistro,transaction);
+        const idUsuario = req.user?.id
+        const idRol = req.user?.id_rol
+
+        await registrarEvento(
+            idUsuario,
+            idRol,
+            0,
+            alta.id,
+            'Alta',
+            data.mensaje,
+            requestIp.getClientIp(req) || 'No Disponible',
+            req.headers['user-agent'] || 'No Disponible',
+            transaction
+        );
         
         await transaction.commit(); 
         
@@ -41,17 +51,27 @@ const ObtenerAdministradores = async (req:RequestExt,res:Response)=>{
 const SuspenderAdministrador = async (req:RequestExt,res:Response)=>{
     const transaction = await sequelize.transaction()
     try{
-        const id_rol = req.user?.id_rol
+        const idUsuario = req.user?.id 
+        const idRol = req.user?.id_rol
         const {idAdmin} = req.query   
-        const administrador = await suspenderAdministrador(id_rol, idAdmin as string,transaction)
+        const adminSuspendido = await suspenderAdministrador(idRol, idAdmin as string,transaction)
         const data = {
-            "data":administrador,
-            mensaje: "Usuario " + (administrador.suspendido == 1 ? "Suspendido: " : "Activado: ") + administrador.apellido+', '+administrador.nombre
+            "data":adminSuspendido,
+            mensaje: "Administrador " + (adminSuspendido.suspendido == 1 ? "Suspendido " : "Activado ")
         }
 
-        const idAdminReg = req.user?.id 
-        const descripcionRegistro = `Administrador ${(administrador.suspendido == 1 ? "Suspendido: " : "Activado: ")}:  ${administrador.dni} (ID: ${administrador.id})`;
-        await registrarActividad(idAdminReg, id_rol, descripcionRegistro, transaction);
+        
+        await registrarEvento(
+            idUsuario,
+            idRol,
+            0,
+            adminSuspendido.id,
+            adminSuspendido.suspendido == 1 ? "Suspender" : "Activar",
+            data.mensaje,
+            requestIp.getClientIp(req) || 'No Disponible',
+            req.headers['user-agent'] || 'No Disponible',
+            transaction
+        );
         await transaction.commit()
 
         res.status(200).send(data)       
@@ -64,17 +84,27 @@ const SuspenderAdministrador = async (req:RequestExt,res:Response)=>{
 const BorrarAdministrador = async (req:RequestExt,res:Response)=>{
     const transaction = await sequelize.transaction()
     try{
-        const id_rol = req.user?.id_rol
+        const idUsuario = req.user?.id 
+        const idRol = req.user?.id_rol
         const {idAdmin} = req.query   
-        const administrador = await borrarAdministrador(id_rol, idAdmin as string,transaction)
+
+        const adminBorrado = await borrarAdministrador(idRol, idAdmin as string,transaction)
         const data = {
-            "data":administrador,
-            mensaje: "Administrador Eliminado:" + administrador.apellido+', '+administrador.nombre
+            "data":adminBorrado,
+            mensaje: "Administrador Eliminado"
         }
 
-        const idAdminReg = req.user?.id 
-        const descripcionRegistro = `Administrador Eliminado:  ${administrador.dni} (ID: ${administrador.id})`;
-        await registrarActividad(idAdminReg, id_rol, descripcionRegistro, transaction);
+        await registrarEvento(
+            idUsuario,
+            idRol,
+            0,
+            adminBorrado.id,
+            "Borrar",
+            data.mensaje,
+            requestIp.getClientIp(req) || 'No Disponible',
+            req.headers['user-agent'] || 'No Disponible',
+            transaction
+        );
         await transaction.commit()
 
         res.status(200).send(data)       
@@ -95,6 +125,59 @@ const ObtenerAdministrador = async (req:RequestExt,res:Response)=>{
     }
 }
 
+const Actualizar = async (req:RequestExt,res:Response)=>{
+    const transaction = await sequelize.transaction()
+    try{
+
+        const idUsuario = req.user?.id
+        const { body, file } = req;
+        const fotoUrl = file ? `/uploads/avatar/${file.filename}` : body.foto;
+
+        const userConFoto = {
+            usuario: {
+                ...body.usuario,
+                foto: fotoUrl,
+            },
+        };
+
+          
+        const usuario = await actualizar(userConFoto.usuario,idUsuario,transaction)
+        const data = {"data":usuario,mensaje: "Datos actualizado"}
+
+        // const idColegio = req.user?.id_colegio
+        // const idUsuario = req.user?.id 
+        
+        // await registrarEvento(
+        //     idUsuario,
+        //     idRol,
+        //     idRol==0?0:1,
+        //     usuario.id,
+        //     usuario.suspendido == 1?"Suspender":"Activar",
+        //     data.mensaje,
+        //     requestIp.getClientIp(req) || 'No Disponible',
+        //     req.headers['user-agent'] || 'No Disponible',
+        //     transaction,
+        //     idColegio
+        // );
+        await transaction.commit()
+
+        res.status(200).send(data)       
+    }catch(e){
+        await transaction.rollback()
+        handleHttp(res,'Error al suspender el usuario.',e)    
+    }
+}
+
+const Me = async (req:RequestExt,res:Response)=>{
+    try{
+        const idUsuario = req.user?.id
+        const usuario = await me(idUsuario)
+        const data = {"data":usuario,"mensaje":"Usuario Encontrado"}
+        res.status(200).send(data)       
+    }catch(e){
+        handleHttp(res,'Error al obtener el usuario.',e)    
+    }
+}
 
 //OTROS
 const Comprobar = async (req:RequestExt,res:Response)=>{
@@ -114,14 +197,23 @@ const Comprobar = async (req:RequestExt,res:Response)=>{
 const NuevoTyc = async (req:RequestExt,res:Response)=>{
     const transaction = await sequelize.transaction(); 
     try{ 
-        const alta = await nuevoTyc(req.body,transaction)
-        const data = {"data":alta,"mensaje":"Nuevos Terminos y Condiciones creado"}
+        const idUsuario = req.user?.id
+        const idRol = req.user?.id_rol
 
-        const idusuario = req.user?.id
-        const idrol = req.user?.id_rol
-        const descripcionRegistro = `Terminos y Condiciones Creado ID: ${alta.id}`;
+        const altaTyc = await nuevoTyc(req.body,transaction)
+        const data = {"data":altaTyc,"mensaje":"Nuevos Terminos y Condiciones creado"}
         
-        await registrarActividad(idusuario,idrol, descripcionRegistro,transaction);
+        await registrarEvento(
+            idUsuario,
+            idRol,
+            6,
+            altaTyc.id,
+            "Alta",
+            data.mensaje,
+            requestIp.getClientIp(req) || 'No Disponible',
+            req.headers['user-agent'] || 'No Disponible',
+            transaction
+        );
 
         await transaction.commit()
 
@@ -145,4 +237,4 @@ const ListadoTyc = async (req:RequestExt,res:Response)=>{
 
 
 
-export {ListadoTyc, NuevoTyc, AltaAdministrador, Comprobar, ObtenerAdministradores,SuspenderAdministrador,ObtenerAdministrador,BorrarAdministrador}
+export {ListadoTyc, NuevoTyc, AltaAdministrador, Comprobar, ObtenerAdministradores,SuspenderAdministrador,ObtenerAdministrador,BorrarAdministrador,Me,Actualizar}

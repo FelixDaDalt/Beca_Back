@@ -80,6 +80,8 @@ const login = async (login: nuevoLogin, tipo: string, ip: string, navegador: str
 
         // 6. Excluir datos sensibles y retornar el token y los datos
         const { password, borrado, ...usuarioLogueado } = usuarioExistente.dataValues;
+
+
         return {
             token,
             datos: usuarioLogueado

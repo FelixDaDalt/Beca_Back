@@ -1,9 +1,10 @@
 import * as Sequelize from 'sequelize';
 import { DataTypes, Model, Optional } from 'sequelize';
+import type { beca, becaId } from './beca';
 import type { beca_solicitud, beca_solicitudId } from './beca_solicitud';
 import type { red, redId } from './red';
 import type { red_colegio, red_colegioId } from './red_colegio';
-import type { registro_colegio, registro_colegioId } from './registro_colegio';
+import type { registroeventos, registroeventosId } from './registroeventos';
 import type { usuario, usuarioId } from './usuario';
 import type { zona_localidad, zona_localidadId } from './zona_localidad';
 
@@ -20,15 +21,15 @@ export interface colegioAttributes {
   telefono: string;
   url: string;
   email?: string;
-  logo?: any;
   terminos?: number;
   suspendido?: number;
   borrado?: number;
+  foto?: string;
 }
 
 export type colegioPk = "id";
 export type colegioId = colegio[colegioPk];
-export type colegioOptionalAttributes = "id" | "email" | "logo" | "terminos" | "suspendido" | "borrado";
+export type colegioOptionalAttributes = "id" | "email" | "terminos" | "suspendido" | "borrado" | "foto";
 export type colegioCreationAttributes = Optional<colegioAttributes, colegioOptionalAttributes>;
 
 export class colegio extends Model<colegioAttributes, colegioCreationAttributes> implements colegioAttributes {
@@ -44,11 +45,23 @@ export class colegio extends Model<colegioAttributes, colegioCreationAttributes>
   telefono!: string;
   url!: string;
   email?: string;
-  logo?: any;
   terminos?: number;
   suspendido?: number;
   borrado?: number;
+  foto?: string;
 
+  // colegio hasMany beca via id_colegio
+  becas!: beca[];
+  getBecas!: Sequelize.HasManyGetAssociationsMixin<beca>;
+  setBecas!: Sequelize.HasManySetAssociationsMixin<beca, becaId>;
+  addBeca!: Sequelize.HasManyAddAssociationMixin<beca, becaId>;
+  addBecas!: Sequelize.HasManyAddAssociationsMixin<beca, becaId>;
+  createBeca!: Sequelize.HasManyCreateAssociationMixin<beca>;
+  removeBeca!: Sequelize.HasManyRemoveAssociationMixin<beca, becaId>;
+  removeBecas!: Sequelize.HasManyRemoveAssociationsMixin<beca, becaId>;
+  hasBeca!: Sequelize.HasManyHasAssociationMixin<beca, becaId>;
+  hasBecas!: Sequelize.HasManyHasAssociationsMixin<beca, becaId>;
+  countBecas!: Sequelize.HasManyCountAssociationsMixin;
   // colegio hasMany beca_solicitud via id_colegio_solic
   beca_solicituds!: beca_solicitud[];
   getBeca_solicituds!: Sequelize.HasManyGetAssociationsMixin<beca_solicitud>;
@@ -85,18 +98,18 @@ export class colegio extends Model<colegioAttributes, colegioCreationAttributes>
   hasRed_colegio!: Sequelize.HasManyHasAssociationMixin<red_colegio, red_colegioId>;
   hasRed_colegios!: Sequelize.HasManyHasAssociationsMixin<red_colegio, red_colegioId>;
   countRed_colegios!: Sequelize.HasManyCountAssociationsMixin;
-  // colegio hasMany registro_colegio via id_colegio
-  registro_colegios!: registro_colegio[];
-  getRegistro_colegios!: Sequelize.HasManyGetAssociationsMixin<registro_colegio>;
-  setRegistro_colegios!: Sequelize.HasManySetAssociationsMixin<registro_colegio, registro_colegioId>;
-  addRegistro_colegio!: Sequelize.HasManyAddAssociationMixin<registro_colegio, registro_colegioId>;
-  addRegistro_colegios!: Sequelize.HasManyAddAssociationsMixin<registro_colegio, registro_colegioId>;
-  createRegistro_colegio!: Sequelize.HasManyCreateAssociationMixin<registro_colegio>;
-  removeRegistro_colegio!: Sequelize.HasManyRemoveAssociationMixin<registro_colegio, registro_colegioId>;
-  removeRegistro_colegios!: Sequelize.HasManyRemoveAssociationsMixin<registro_colegio, registro_colegioId>;
-  hasRegistro_colegio!: Sequelize.HasManyHasAssociationMixin<registro_colegio, registro_colegioId>;
-  hasRegistro_colegios!: Sequelize.HasManyHasAssociationsMixin<registro_colegio, registro_colegioId>;
-  countRegistro_colegios!: Sequelize.HasManyCountAssociationsMixin;
+  // colegio hasMany registroeventos via id_colegio
+  registroeventos!: registroeventos[];
+  getRegistroeventos!: Sequelize.HasManyGetAssociationsMixin<registroeventos>;
+  setRegistroeventos!: Sequelize.HasManySetAssociationsMixin<registroeventos, registroeventosId>;
+  addRegistroevento!: Sequelize.HasManyAddAssociationMixin<registroeventos, registroeventosId>;
+  addRegistroeventos!: Sequelize.HasManyAddAssociationsMixin<registroeventos, registroeventosId>;
+  createRegistroevento!: Sequelize.HasManyCreateAssociationMixin<registroeventos>;
+  removeRegistroevento!: Sequelize.HasManyRemoveAssociationMixin<registroeventos, registroeventosId>;
+  removeRegistroeventos!: Sequelize.HasManyRemoveAssociationsMixin<registroeventos, registroeventosId>;
+  hasRegistroevento!: Sequelize.HasManyHasAssociationMixin<registroeventos, registroeventosId>;
+  hasRegistroeventos!: Sequelize.HasManyHasAssociationsMixin<registroeventos, registroeventosId>;
+  countRegistroeventos!: Sequelize.HasManyCountAssociationsMixin;
   // colegio hasMany usuario via id_colegio
   usuarios!: usuario[];
   getUsuarios!: Sequelize.HasManyGetAssociationsMixin<usuario>;
@@ -172,10 +185,6 @@ export class colegio extends Model<colegioAttributes, colegioCreationAttributes>
       allowNull: true,
       defaultValue: "No Definido"
     },
-    logo: {
-      type: DataTypes.BLOB,
-      allowNull: true
-    },
     terminos: {
       type: DataTypes.BOOLEAN,
       allowNull: true,
@@ -190,6 +199,11 @@ export class colegio extends Model<colegioAttributes, colegioCreationAttributes>
       type: DataTypes.BOOLEAN,
       allowNull: true,
       defaultValue: 0
+    },
+    foto: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      defaultValue: "\/uploads\/colegio\/default.png"
     }
   }, {
     sequelize,

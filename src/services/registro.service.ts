@@ -1,230 +1,251 @@
-import { registro_responsable } from "../models/registro_responsable";
-import { registro_administrador } from "../models/registro_administrador";
-import { registro_delegado } from "../models/registro_delegado";
-import { Model, ModelCtor, Op, Transaction } from "sequelize";
-import sequelize from "../config/database";
-import { usuario } from "../models/usuario";
-import { registro_autorizado } from "../models/registro_autorizado";
-import { administrador } from "../models/administrador";
-import { registro_red } from "../models/registro_red";
-import { registro_colegio } from "../models/registro_colegio";
+import { usuario } from '../models/usuario';
+import { entidad_tipo } from '../models/entidad_tipo';
+import { registroeventos } from '../models/registroeventos';
+import { Op, Transaction } from 'sequelize';
+import { colegio } from '../models/colegio';
+import { red } from '../models/red';
+import { administrador } from '../models/administrador';
 
 
-const registrarActividad = async (
-    idAdmin: number,
-    idRol: number,
-    descripcion: string,
-    transaction:Transaction
+const registrarEvento = async (
+    idUsuario: number,                    // ID del usuario o administrador que realiza la acción
+    idRol: number,                 // Rol del usuario que realiza la acción (0 para administrador, otro valor para usuario)
+    entidadTipoId: number,         // ID del tipo de entidad (e.g., colegio, beca, etc.)
+    entidadId: number,             // ID de la entidad específica
+    accion: string,                // Acción realizada (e.g., 'Alta')
+    descripcion: string,           // Descripción de la actividad realizada
+    ip: string,
+    navegador: string,
+    transaction: Transaction,
+    idColegio?:number, 
 ) => {
     try {
-        // Definir `table` como `ModelCtor<Model<any, any>>`
-        let table: ModelCtor<Model<any, any>>;
 
-        // Selección del modelo según el rol
+        const entidadTipo = await entidad_tipo.findOne({
+            where: { id: entidadTipoId }
+        });
+
+        if (!entidadTipo) {
+            throw new Error('Tipo de entidad no encontrado: ${entidadTipoId}');
+        }
+
+        const registroData = {
+            entidad_tipo_id: entidadTipoId,
+            entidad_id: entidadId,
+            accion,
+            descripcion,
+            ip,
+            navegador,
+            fecha_hora: new Date(),
+            usuario_id: idRol === 0 ? undefined : idUsuario,     // Si es rol de administrador, no asignamos `usuario_id`
+            administrador_id: idRol === 0 ? idUsuario : undefined, // Si no es rol de administrador, no asignamos `administrador_id`
+            id_rol:idRol,
+            id_colegio:idColegio
+        };
+
+        // Crear el primer registro de actividad
+        await registroeventos.create(registroData, { transaction });
+
+
+
+    } catch (error: any) {
+        throw new Error('Error al registrar el evento: ' + error.message);
+    }
+};
+
+const registrosPorColegio = async (idColegio:string, idRol:number)=>{
+    try {
+        // Obtener los registros relacionados con el colegio
+        const registros = await registroeventos.findAll({
+            where: { 
+                id_colegio: idColegio,
+                id_rol: { [Op.gte]: idRol }
+            },
+            attributes: ['id', 'accion', 'descripcion', 'fecha_hora', 'ip', 'navegador', 'entidad_tipo_id', 'entidad_id', 'usuario_id', 'administrador_id', 'id_rol'],
+        });
+
+        const registrosConDetalles = await Promise.all(
+            registros.map(async (registro) => {
+                // Determinar el modelo a consultar según `entidad_tipo_id`
+                let entidadDetalle = null;
+                switch (registro.entidad_tipo_id) {
+                    case 1: // Usuario
+                        entidadDetalle = await usuario.findOne({
+                            where: { id: registro.entidad_id },
+                            attributes: ['nombre', 'apellido'],
+                        });
+                        break;
+                    case 2: // Colegio
+                        entidadDetalle = await colegio.findOne({
+                            where: { id: registro.entidad_id },
+                            attributes: ['nombre'],
+                        });
+                        break;
+                    case 3: // Red
+                        entidadDetalle = await red.findOne({
+                            where: { id: registro.entidad_id },
+                            attributes: ['nombre'],
+                        });
+                        break;
+                }
+
+                // Determinar quién realizó el movimiento
+                const actor =
+                    registro.usuario_id !== null
+                        ? await usuario.findOne({
+                              where: { id: registro.usuario_id },
+                              attributes: ['nombre', 'apellido'],
+                          })
+                        : await administrador.findOne({
+                              where: { id: registro.administrador_id },
+                              attributes: ['nombre', 'apellido'],
+                          });
+
+                const actorNombre = actor ? `${actor.nombre} ${actor.apellido}` : 'Desconocido';
+                const entidadNombre = entidadDetalle
+                ? `${entidadDetalle.nombre}${'apellido' in entidadDetalle && entidadDetalle.apellido ? ' ' + entidadDetalle.apellido : ''}`
+                : 'Entidad desconocida';
+
+                return {
+                    id: registro.id,
+                    accion: registro.accion,
+                    descripcion: registro.descripcion,
+                    entidad: entidadNombre,
+                    realizadoPor: actorNombre,
+                    rol: obtenerRol(registro.id_rol),
+                    fecha_hora: registro.fecha_hora,
+                    ip: registro.ip,
+                    navegador: registro.navegador,
+                };
+            })
+        );
+
+        // Agrupar por roles
+        const agrupadosPorRol = registrosConDetalles.reduce((acumulador:any, registro:any) => {
+            const rolKey = registro.rol.toLowerCase(); // "administrador", "responsable", etc.
+            if (!acumulador[rolKey]) {
+                acumulador[rolKey] = [];
+            }
+            acumulador[rolKey].push({
+                id:registro.id,
+                realizadoPor: registro.realizadoPor,
+                descripcion: registro.descripcion,
+                entidad: registro.entidad,
+                fechaHora: registro.fecha_hora,
+                ip: registro.ip,
+                navegador: registro.navegador,
+                accion: registro.accion,
+            });
+            return acumulador;
+        }, {});
+
+        // Responder con los datos organizados
+        return agrupadosPorRol
+    }catch (error: any) {
+        throw new Error('Error al obtener los registros: ' + error.message);
+    }
+}
+
+const registrosAdmin = async ()=>{
+    try {
+        // Obtener los registros relacionados con el colegio
+        const registros = await registroeventos.findAll({
+            where: { 
+                id_rol: 0
+            },
+            attributes: ['id', 'accion', 'descripcion', 'fecha_hora', 'ip', 'navegador', 'entidad_tipo_id', 'entidad_id', 'usuario_id', 'administrador_id', 'id_rol'],
+        });
+
+        const registrosConDetalles = await Promise.all(
+            registros.map(async (registro) => {
+                // Determinar el modelo a consultar según `entidad_tipo_id`
+                let entidadDetalle = null;
+                switch (registro.entidad_tipo_id) {
+                    case 1: // Usuario
+                        entidadDetalle = await usuario.findOne({
+                            where: { id: registro.entidad_id },
+                            attributes: ['nombre', 'apellido'],
+                        });
+                        break;
+                    case 2: // Colegio
+                        entidadDetalle = await colegio.findOne({
+                            where: { id: registro.entidad_id },
+                            attributes: ['nombre'],
+                        });
+                        break;
+                    case 3: // Red
+                        entidadDetalle = await red.findOne({
+                            where: { id: registro.entidad_id },
+                            attributes: ['nombre'],
+                        });
+                        break;
+                }
+
+                // Determinar quién realizó el movimiento
+                const actor = await administrador.findOne({
+                              where: { id: registro.administrador_id },
+                              attributes: ['nombre', 'apellido'],
+                          });
+
+                const actorNombre = actor ? `${actor.nombre} ${actor.apellido}` : 'Desconocido';
+                const entidadNombre = entidadDetalle
+                ? `${entidadDetalle.nombre}${'apellido' in entidadDetalle && entidadDetalle.apellido ? ' ' + entidadDetalle.apellido : ''}`
+                : 'Entidad desconocida';
+
+                return {
+                    id: registro.id,
+                    accion: registro.accion,
+                    descripcion: registro.descripcion,
+                    entidad: entidadNombre,
+                    realizadoPor: actorNombre,
+                    rol: obtenerRol(registro.id_rol),
+                    fecha_hora: registro.fecha_hora,
+                    ip: registro.ip,
+                    navegador: registro.navegador,
+                };
+            })
+        );
+
+        // Agrupar por roles
+        const agrupadosPorRol = registrosConDetalles.reduce((acumulador:any, registro:any) => {
+            const rolKey = registro.rol.toLowerCase(); // "administrador", "responsable", etc.
+            if (!acumulador[rolKey]) {
+                acumulador[rolKey] = [];
+            }
+            acumulador[rolKey].push({
+                id:registro.id,
+                realizadoPor: registro.realizadoPor,
+                descripcion: registro.descripcion,
+                entidad: registro.entidad,
+                fechaHora: registro.fecha_hora,
+                ip: registro.ip,
+                navegador: registro.navegador,
+                accion: registro.accion,
+            });
+            return acumulador;
+        }, {});
+
+        // Responder con los datos organizados
+        return agrupadosPorRol
+    }catch (error: any) {
+        throw new Error('Error al obtener los registros: ' + error.message);
+    }
+}
+
+const obtenerRol = (idRol: number): string => {
         switch (idRol) {
             case 0:
-                table = registro_administrador;
-                break;
+                return 'Administrador';
             case 1:
-                table = registro_responsable;
-                break;
+                return 'Responsable';
             case 2:
-                table = registro_delegado;
-                break;
+                return 'Delegado';
             case 3:
-                table = registro_autorizado;
-                break;
+                return 'Autorizado';
             default:
-                throw new Error('Rol no válido');
+                return 'Desconocido';
         }
-
-        // Crear el registro en la tabla seleccionada
-        return await table.create(
-            {
-                id_usuario: idAdmin,
-                fecha_hora: new Date(),
-                registro: descripcion
-            },{transaction}
-        );
-    } catch (error: any) {
-        throw new Error('Error al registrar la actividad: ' + error.message);
-    }
 };
 
-const listadoRegistros = async (id_colegio: string) => {
-    const transaction = await sequelize.transaction();
-
-    try {
-        let registros: any = {
-            delegado: null,
-            responsable: null,
-            autorizado:null
-        };
-
-        registros.responsable = await registro_responsable.findAll({
-                    include: [{
-                        model: usuario,
-                        as: 'id_usuario_usuario',
-                        attributes:{exclude:['password','borrado']},
-                        where: { 
-                            id_colegio,
-                        }
-                    }],
-                    transaction
-        });
-
-        registros.delegado = await registro_delegado.findAll({
-                    include: [{
-                        model: usuario,
-                        as: 'id_usuario_usuario',
-                        attributes:{exclude:['password','borrado']},
-                        where: { 
-                            id_colegio,
-                        }
-                    }],
-                    transaction
-        });
-
-        registros.autorizado = await registro_autorizado.findAll({
-                    include: [{
-                        model: usuario,
-                        as: 'id_usuario_usuario',
-                        attributes:{exclude:['password','borrado']},
-                        where: { 
-                            id_colegio,
-                        }
-                    }],
-                    transaction
-        });
-        
-        await transaction.commit();
-        
-        return {
-            administrador: registros.administrador,
-            responsable: registros.responsable,
-            delegado: registros.delegado,
-            autorizado: registros.autorizado
-            };
-        }
-
-       
-     catch (error) {
-        await transaction.rollback();
-        throw error;
-    }
-};
-
-const listadoRegistrosAdmin = async () => {
-    const transaction = await sequelize.transaction();
-
-    try {
-        let registros: any = {
-            administrador:null,
-            delegado: null,
-            responsable: null,
-            autorizado:null
-        };
-
-        registros.administrador = await registro_administrador.findAll({
-            include: [{
-                model: administrador,
-                as: 'id_usuario_administrador',
-                attributes:{exclude:['password','borrado']},
-            }],
-            transaction
-        });
-
-        registros.responsable = await registro_responsable.findAll({
-                    include: [{
-                        model: usuario,
-                        as: 'id_usuario_usuario',
-                        attributes:{exclude:['password','borrado']},
-                    }],
-                    transaction
-        });
-
-        registros.delegado = await registro_delegado.findAll({
-                    include: [{
-                        model: usuario,
-                        as: 'id_usuario_usuario',
-                        attributes:{exclude:['password','borrado']},
-                    }],
-                    transaction
-        });
-
-        registros.autorizado = await registro_autorizado.findAll({
-                    include: [{
-                        model: usuario,
-                        as: 'id_usuario_usuario',
-                        attributes:{exclude:['password','borrado']},
-                    }],
-                    transaction
-        });
-        
-        await transaction.commit();
-        
-        return {
-            administrador: registros.administrador,
-            responsable: registros.responsable,
-            delegado: registros.delegado,
-            autorizado: registros.autorizado
-            };
-        }
-     catch (error) {
-        await transaction.rollback();
-        throw error;
-    }
-};
-
-const registrarActividadRed = async (
-    idRed:number,
-    idUsuario: number,
-    idRol: number,
-    descripcion: string,
-    transaction:Transaction,
-    comentario?:string
-) => {
-    try {
-        await registro_red.create(
-            {
-                id_red:idRed,
-                id_usuario: idRol>0?idUsuario:undefined,
-                id_admi: idRol == 0?idUsuario:undefined,
-                fecha_hora: new Date(),
-                descripcion: descripcion,
-                comentario:comentario?comentario:undefined
-            },{transaction}
-        );
-    } catch (error: any) {
-        throw new Error('Error al registrar la actividad de Red: ' + error.message);
-    }
-};
-
-const registrarActividadColegio = async (
-    idColegio: number,
-    idUsuario: number,
-    idRol: number,
-    descripcion: string,
-    transaction: Transaction,
-    comentario?: string
-) => {
-    try {
-        await registro_colegio.create(
-            {
-                id_colegio: idColegio,
-                id_usuario: idRol > 0 ? idUsuario : undefined, 
-                id_admi: idRol === 0 ? idUsuario : undefined, 
-                fecha_hora: new Date(),
-                descripcion: descripcion,
-                comentario: comentario ? comentario : undefined  
-            },
-            { transaction } 
-        );
-    } catch (error: any) {
-        throw new Error('Error al registrar la actividad de Red: ' + error.message);
-    }
-};
-
-
-export {registrarActividad, listadoRegistros,listadoRegistrosAdmin,registrarActividadRed,registrarActividadColegio }
+export { registrarEvento,registrosPorColegio,registrosAdmin };
 
