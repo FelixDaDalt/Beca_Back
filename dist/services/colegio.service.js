@@ -18,11 +18,11 @@ const obtenerColegio = async (idColegio) => {
             attributes: { exclude: ['borrado'] },
             include: [{
                     model: zona_localidad_1.zona_localidad,
-                    as: 'zona_localidad',
+                    as: 'id_zona_zona_localidad',
                     required: false,
                     include: [{
                             model: zona_1.zona,
-                            as: 'zona',
+                            as: 'id_zona_zona',
                             required: false
                         }]
                 }]
@@ -206,12 +206,12 @@ const detalleColegio = async (idColegio) => {
                 },
                 {
                     model: zona_localidad_1.zona_localidad,
-                    as: 'zona_localidad',
+                    as: 'id_zona_zona_localidad',
                     required: false,
                     attributes: { exclude: ['borrado'] },
                     include: [{
                             model: zona_1.zona,
-                            as: 'zona',
+                            as: 'id_zona_zona',
                             required: false,
                             attributes: { exclude: ['borrado'] }
                         }]

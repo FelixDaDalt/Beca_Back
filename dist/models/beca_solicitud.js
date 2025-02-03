@@ -118,6 +118,23 @@ class beca_solicitud extends sequelize_1.Model {
                     model: 'beca_estado',
                     key: 'id'
                 }
+            },
+            id_usuario_baja: {
+                type: sequelize_1.DataTypes.INTEGER,
+                allowNull: true,
+                references: {
+                    model: 'usuario',
+                    key: 'id'
+                }
+            },
+            baja_fecha_hora: {
+                type: sequelize_1.DataTypes.DATE,
+                allowNull: true,
+                defaultValue: Sequelize.Sequelize.fn('current_timestamp')
+            },
+            baja_comentario: {
+                type: sequelize_1.DataTypes.TEXT,
+                allowNull: true
             }
         }, {
             sequelize,
@@ -172,6 +189,13 @@ class beca_solicitud extends sequelize_1.Model {
                     using: "BTREE",
                     fields: [
                         { name: "id_estado" },
+                    ]
+                },
+                {
+                    name: "fk_beca_solicitud_usuario",
+                    using: "BTREE",
+                    fields: [
+                        { name: "id_usuario_baja" },
                     ]
                 },
             ]

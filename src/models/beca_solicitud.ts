@@ -22,11 +22,16 @@ export interface beca_solicitudAttributes {
   id_usuario_reso?: number;
   reso_fecha_hora?: Date;
   id_estado: number;
+  id_usuario_baja?: number;
+  baja_fecha_hora?: Date;
+  baja_comentario?: string;
+  sinLeer?: number;
+  sinLeerSolicitante?:number
 }
 
 export type beca_solicitudPk = "id";
 export type beca_solicitudId = beca_solicitud[beca_solicitudPk];
-export type beca_solicitudOptionalAttributes = "id" | "fecha_hora" | "detalle" | "id_resolucion" | "res_comentario" | "id_usuario_reso" | "reso_fecha_hora" | "id_estado";
+export type beca_solicitudOptionalAttributes = "id" | "fecha_hora" | "detalle" | "id_resolucion" | "res_comentario" | "id_usuario_reso" | "reso_fecha_hora" | "id_estado" | "id_usuario_baja" | "baja_fecha_hora" | "baja_comentario" | "sinLeerSolicitante" | "sinLeer";
 export type beca_solicitudCreationAttributes = Optional<beca_solicitudAttributes, beca_solicitudOptionalAttributes>;
 
 export class beca_solicitud extends Model<beca_solicitudAttributes, beca_solicitudCreationAttributes> implements beca_solicitudAttributes {
@@ -45,7 +50,12 @@ export class beca_solicitud extends Model<beca_solicitudAttributes, beca_solicit
   id_usuario_reso?: number;
   reso_fecha_hora?: Date;
   id_estado!: number;
-
+  id_usuario_baja?: number;
+  baja_fecha_hora?: Date;
+  baja_comentario?: string;
+  sinLeer?: number;
+  sinLeerSolicitante?:number
+  
   // beca_solicitud belongsTo beca via id_beca
   id_beca_beca!: beca;
   getId_beca_beca!: Sequelize.BelongsToGetAssociationMixin<beca>;
@@ -76,6 +86,11 @@ export class beca_solicitud extends Model<beca_solicitudAttributes, beca_solicit
   getId_usuario_reso_usuario!: Sequelize.BelongsToGetAssociationMixin<usuario>;
   setId_usuario_reso_usuario!: Sequelize.BelongsToSetAssociationMixin<usuario, usuarioId>;
   createId_usuario_reso_usuario!: Sequelize.BelongsToCreateAssociationMixin<usuario>;
+  // beca_solicitud belongsTo usuario via id_usuario_baja
+  id_usuario_baja_usuario!: usuario;
+  getId_usuario_baja_usuario!: Sequelize.BelongsToGetAssociationMixin<usuario>;
+  setId_usuario_baja_usuario!: Sequelize.BelongsToSetAssociationMixin<usuario, usuarioId>;
+  createId_usuario_baja_usuario!: Sequelize.BelongsToCreateAssociationMixin<usuario>;
 
   static initModel(sequelize: Sequelize.Sequelize): typeof beca_solicitud {
     return beca_solicitud.init({
@@ -168,6 +183,33 @@ export class beca_solicitud extends Model<beca_solicitudAttributes, beca_solicit
         model: 'beca_estado',
         key: 'id'
       }
+    },
+    id_usuario_baja: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'usuario',
+        key: 'id'
+      }
+    },
+    baja_fecha_hora: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      defaultValue: Sequelize.Sequelize.fn('current_timestamp')
+    },
+    baja_comentario: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    sinLeer: {
+      type: DataTypes.NUMBER,
+      defaultValue: 1,
+      allowNull: true
+    },
+    sinLeerSolicitante: {
+      type: DataTypes.NUMBER,
+      defaultValue: 0,
+      allowNull: true
     }
   }, {
     sequelize,
@@ -222,6 +264,13 @@ export class beca_solicitud extends Model<beca_solicitudAttributes, beca_solicit
         using: "BTREE",
         fields: [
           { name: "id_estado" },
+        ]
+      },
+      {
+        name: "fk_beca_solicitud_usuario",
+        using: "BTREE",
+        fields: [
+          { name: "id_usuario_baja" },
         ]
       },
     ]

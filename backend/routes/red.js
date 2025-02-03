@@ -1,0 +1,23 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.router = void 0;
+const express_1 = require("express");
+const session_1 = require("../middleware/session");
+const roles_mid_1 = require("../middleware/roles.mid");
+const red_controller_1 = require("../controllers/red.controller");
+const upload_1 = __importDefault(require("../middleware/upload"));
+const router = (0, express_1.Router)();
+exports.router = router;
+router.post('/alta', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([0]), upload_1.default.single('foto'), red_controller_1.AltaRed);
+router.get('/listado', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([0, 1, 2, 3]), red_controller_1.ObtenerRedes);
+router.put('/borrar', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([0]), red_controller_1.BorrarRed);
+router.put('/editarDatos', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([0, 1, 2]), upload_1.default.single('foto'), red_controller_1.EditarDatosRed);
+router.get('/obtener', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([0, 1, 2, 3]), red_controller_1.ObtenerRed);
+router.get('/colegiosDisponibles', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([0, 1]), red_controller_1.ColegiosDisponibles);
+router.put('/borrarMiembro', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([0]), red_controller_1.BorrarMiembro);
+router.put('/editarMiembros', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([0, 1]), red_controller_1.EditarMiembrosRed);
+router.get('/obtenerMiembros', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([0, 1, 2, 3]), red_controller_1.ObtenerMiembros);
+router.get('/me', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([1, 2, 3]), red_controller_1.Me);

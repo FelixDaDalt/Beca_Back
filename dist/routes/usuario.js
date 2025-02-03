@@ -16,7 +16,7 @@ exports.router = router;
 router.put('/cambiarPassword', session_1.comprobarJWT, usuario_controller_1.CambiarPassword);
 router.put('/aceptarTyc', session_1.comprobarJWT, usuario_controller_1.AceptarTyc);
 router.get('/tyc', session_1.comprobarJWT, usuario_controller_1.ObtenerTyc);
-router.get('/detalle', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([0, 1, 2]), usuario_controller_1.Obtener);
+router.get('/detalle', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([0, 1, 2, 3]), usuario_controller_1.Obtener);
 router.put('/borrar', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([0, 1, 2]), usuario_controller_1.Borrar);
 router.put('/editar', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([0, 1, 2, 3]), avatar_upload_1.default.single('foto'), usuario_controller_1.Editar);
 router.get('/me', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([1, 2, 3]), usuario_controller_1.Me);

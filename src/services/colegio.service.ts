@@ -23,11 +23,11 @@ const obtenerColegio = async (idColegio:string) => {
             attributes: { exclude: ['borrado'] },
             include:[{
                 model:zona_localidad,
-                as:'zona_localidad',
+                as:'id_zona_zona_localidad',
                 required:false,
                 include:[{
                     model:zona,
-                    as:'zona',
+                    as:'id_zona_zona',
                     required:false
                 }]
             }]
@@ -235,12 +235,12 @@ const detalleColegio = async (idColegio: string) => {
                 },
                 {
                     model: zona_localidad,
-                    as: 'zona_localidad',
+                    as: 'id_zona_zona_localidad',
                     required: false,
                     attributes: { exclude: ['borrado'] },
                     include: [{
                         model: zona,
-                        as: 'zona',
+                        as: 'id_zona_zona',
                         required: false,
                         attributes: { exclude: ['borrado'] }
                     }]
@@ -256,7 +256,8 @@ const detalleColegio = async (idColegio: string) => {
                             where:{borrado:0},
                             attributes: ['id', 'nombre', 'porcentaje', 'foto','caracteristicas'],  // Incluir datos relevantes de la red
                         }                        
-                    ]
+                    ],
+                    required:false
                 }
             ]
         });

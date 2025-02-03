@@ -12,7 +12,7 @@ const obtenerZonas = async () => {
             attributes: { exclude: ['borrado'] },
             include:[{
                 model:zona_localidad,
-                as:'zona_localidad',
+                as:'zona_localidads',
                 required:false,
                 attributes: { exclude: ['borrado'] }
             }]

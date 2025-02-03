@@ -82,7 +82,8 @@ const ObtenerTyc = async (req:RequestExt,res:Response)=>{
 
 const Obtener = async (req:RequestExt,res:Response)=>{
     try{
-        const {idUsuario} = req.query   
+        const {idUsuario} = req.query
+           
         const usuario = await obtenerUsuario(idUsuario as string)
         const data = {"data":usuario,"mensaje":"Usuario Encontrado"}
         res.status(200).send(data)       

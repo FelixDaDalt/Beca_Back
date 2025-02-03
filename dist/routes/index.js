@@ -39,6 +39,6 @@ const limpiarExtension = (filename) => {
     if (archivoSinExtension !== "index")
         Promise.resolve(`${`./${archivoSinExtension}`}`).then(s => __importStar(require(s))).then((moduloRuta) => {
             console.log("se esta cargando la ruta " + archivoSinExtension);
-            routes.use(`/${archivoSinExtension}`, moduloRuta.router);
+            routes.use(`/api/${archivoSinExtension}`, moduloRuta.router);
         });
 });

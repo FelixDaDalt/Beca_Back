@@ -60,7 +60,7 @@ const listadoResponsables = async (idConsulta:string, idColegio?:number) => {
                 required:false,
                 include:[{
                     model:zona_localidad,
-                    as:'zona_localidad',
+                    as:'id_zona_zona_localidad',
                     required:false,
                 }],
                 attributes: { exclude: ['logo', 'borrado'] },

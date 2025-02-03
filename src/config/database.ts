@@ -1,5 +1,12 @@
 import { Sequelize } from 'sequelize-typescript';
 import { initModels } from '../models/init-models';
+import dotenv from 'dotenv';
+
+if (process.env.NODE_ENV === 'production') {
+  dotenv.config({ path: '.env.production' }); // Cargar el .env de producción
+} else {
+  dotenv.config({ path: '.env.local' });
+}
 
 const sequelize = new Sequelize({
   database: process.env.DB_NAME!,

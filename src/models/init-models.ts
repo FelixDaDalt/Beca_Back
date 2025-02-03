@@ -156,13 +156,15 @@ export function initModels(sequelize: Sequelize) {
   usuario.hasMany(beca_solicitud, { as: "beca_solicituds", foreignKey: "id_usuario_solic"});
   beca_solicitud.belongsTo(usuario, { as: "id_usuario_reso_usuario", foreignKey: "id_usuario_reso"});
   usuario.hasMany(beca_solicitud, { as: "id_usuario_reso_beca_solicituds", foreignKey: "id_usuario_reso"});
+  beca_solicitud.belongsTo(usuario, { as: "id_usuario_baja_usuario", foreignKey: "id_usuario_baja"});
+  usuario.hasMany(beca_solicitud, { as: "id_usuario_baja_beca_solicituds", foreignKey: "id_usuario_baja"});
   ingresos_usuarios.belongsTo(usuario, { as: "id_usuario_usuario", foreignKey: "id_usuario"});
   usuario.hasMany(ingresos_usuarios, { as: "ingresos_usuarios", foreignKey: "id_usuario"});
   registroeventos.belongsTo(usuario, { as: "usuario", foreignKey: "usuario_id"});
   usuario.hasMany(registroeventos, { as: "registroeventos", foreignKey: "usuario_id"});
-  zona_localidad.belongsTo(zona, { as: "zona", foreignKey: "id_zona"});
-  zona.hasMany(zona_localidad, { as: "zona_localidad", foreignKey: "id_zona"});
-  colegio.belongsTo(zona_localidad, { as: "zona_localidad", foreignKey: "id_zona"});
+  zona_localidad.belongsTo(zona, { as: "id_zona_zona", foreignKey: "id_zona"});
+  zona.hasMany(zona_localidad, { as: "zona_localidads", foreignKey: "id_zona"});
+  colegio.belongsTo(zona_localidad, { as: "id_zona_zona_localidad", foreignKey: "id_zona"});
   zona_localidad.hasMany(colegio, { as: "colegios", foreignKey: "id_zona"});
 
   return {

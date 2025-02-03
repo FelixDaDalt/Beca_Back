@@ -7,14 +7,14 @@ export interface red_colegioAttributes {
   id_colegio: number;
   anfitrion?: number;
   id_red: number;
-  bp?: number;
-  btp?: number;
-  db?: number;
-  dbu?: number;
-  dbd?: number;
-  bsp?: number;
-  bsa?: number;
-  bde?: number;
+  bp: number;
+  btp: number;
+  db: number;
+  dbu: number;
+  dbd: number;
+  bsp: number;
+  bsa: number;
+  bde: number;
   borrado?: number;
 }
 
@@ -27,14 +27,14 @@ export class red_colegio extends Model<red_colegioAttributes, red_colegioCreatio
   id_colegio!: number;
   anfitrion?: number;
   id_red!: number;
-  bp?: number;
-  btp?: number;
-  db?: number;
-  dbu?: number;
-  dbd?: number;
-  bsp?: number;
-  bsa?: number;
-  bde?: number;
+  bp!: number;
+  btp!: number;
+  db!: number;
+  dbu!: number;
+  dbd!: number;
+  bsp!: number;
+  bsa!: number;
+  bde!: number;
   borrado?: number;
 
   // red_colegio belongsTo colegio via id_colegio
