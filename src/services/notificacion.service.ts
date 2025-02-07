@@ -9,7 +9,15 @@ import { colegio } from "../models/colegio";
 const notificaciones = async (idUsuario: string, idRol: number, idColegio: string, transaction: Transaction) => {
     try {
         let solicitudes: any[] = []; // Inicializa solicitudes como un array vacío
-
+        if(idRol == 0){
+            return {
+                solicitudesSinLeer: 0,
+            misSolicitudesSinLeer: 0,
+            total: 0,
+            solicitudes: [],
+            misSolicitudes: []
+            }
+        }
         // Si el rol es mayor a 2, ejecuta la consulta de solicitudes
         if (idRol <= 2) {
             solicitudes = await beca_solicitud.findAll({

@@ -1,4 +1,6 @@
 import type { Sequelize } from "sequelize";
+import { actividad_log as _actividad_log } from "./actividad_log";
+import type { actividad_logAttributes, actividad_logCreationAttributes } from "./actividad_log";
 import { administrador as _administrador } from "./administrador";
 import type { administradorAttributes, administradorCreationAttributes } from "./administrador";
 import { beca as _beca } from "./beca";
@@ -37,6 +39,7 @@ import { zona_localidad as _zona_localidad } from "./zona_localidad";
 import type { zona_localidadAttributes, zona_localidadCreationAttributes } from "./zona_localidad";
 
 export {
+  _actividad_log as actividad_log,
   _administrador as administrador,
   _beca as beca,
   _beca_estado as beca_estado,
@@ -58,6 +61,8 @@ export {
 };
 
 export type {
+  actividad_logAttributes,
+  actividad_logCreationAttributes,
   administradorAttributes,
   administradorCreationAttributes,
   becaAttributes,
@@ -97,6 +102,7 @@ export type {
 };
 
 export function initModels(sequelize: Sequelize) {
+  const actividad_log = _actividad_log.initModel(sequelize);
   const administrador = _administrador.initModel(sequelize);
   const beca = _beca.initModel(sequelize);
   const beca_estado = _beca_estado.initModel(sequelize);
@@ -158,6 +164,8 @@ export function initModels(sequelize: Sequelize) {
   usuario.hasMany(beca_solicitud, { as: "id_usuario_reso_beca_solicituds", foreignKey: "id_usuario_reso"});
   beca_solicitud.belongsTo(usuario, { as: "id_usuario_baja_usuario", foreignKey: "id_usuario_baja"});
   usuario.hasMany(beca_solicitud, { as: "id_usuario_baja_beca_solicituds", foreignKey: "id_usuario_baja"});
+  beca_solicitud.belongsTo(usuario, { as: "id_pariente_usuario", foreignKey: "id_pariente"});
+  usuario.hasMany(beca_solicitud, { as: "id_pariente_beca_solicituds", foreignKey: "id_pariente"});
   ingresos_usuarios.belongsTo(usuario, { as: "id_usuario_usuario", foreignKey: "id_usuario"});
   usuario.hasMany(ingresos_usuarios, { as: "ingresos_usuarios", foreignKey: "id_usuario"});
   registroeventos.belongsTo(usuario, { as: "usuario", foreignKey: "usuario_id"});
@@ -168,6 +176,7 @@ export function initModels(sequelize: Sequelize) {
   zona_localidad.hasMany(colegio, { as: "colegios", foreignKey: "id_zona"});
 
   return {
+    actividad_log: actividad_log,
     administrador: administrador,
     beca: beca,
     beca_estado: beca_estado,

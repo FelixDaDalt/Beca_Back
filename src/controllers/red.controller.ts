@@ -279,46 +279,6 @@ const BorrarMiembro = async (req:RequestExt,res:Response)=>{
     }
 }
 
-// const SuspenderColegio = async (req:RequestExt,res:Response)=>{
-//     const transaction = await sequelize.transaction();
-//     try{ 
-//         const { idColegio } = req.query; 
-//         const colegio = await suspenderColegio(idColegio as string,transaction)
-//         const data = {
-//             "data":colegio,
-//             mensaje: "Colegio " + (colegio.suspendido == 1 ? "Suspension " : "Activacion ") + colegio.nombre
-//         }
-
-//         const idAdmin = req.user?.id 
-//         const idRol = req.user?.id_rol
-        
-//         const descripcionRegistro = `${(colegio.suspendido == 1 ? "Suspension " : "Activacion ")} de colegio:  ${colegio.cuit} (${colegio.id})`;
-//         await registrarActividad(idAdmin,idRol, descripcionRegistro, transaction);
-        
-//         await transaction.commit()
-//         res.status(200).send(data);
-//     }catch(e){
-//         await transaction.rollback()
-//         handleHttp(res,'Error al suspender el colegio',e)    
-//     }
-// }
-
-// const DetalleColegio = async (req:RequestExt,res:Response)=>{
-//     try{ 
-//         const idRol = req.user?.id_rol;
-//         let idColegio = req.query.id
-//         if (idRol > 0) {
-//             idColegio = req.user?.id_colegio
-//         }
-
-//         const detalle = await detalleColegio(idColegio as string)
-//         const data = {"data":detalle,"mensaje":"Detalle del colegio"}
-//         res.status(200).send(data);
-//     }catch(e){
-//         handleHttp(res,'Error al obtener el Detalle del colegio',e)    
-//     }
-// }
-
 
 /// MIEMBROS
 const Me = async (req:RequestExt,res:Response)=>{
@@ -336,8 +296,9 @@ const Me = async (req:RequestExt,res:Response)=>{
 
 const ObtenerMiembros = async (req:RequestExt,res:Response)=>{
     try{ 
-        const {idRed} = req.query 
-        const listado = await obtenerMiembros(idRed as string)
+        const {idRed} = req.query
+        const rol = req.user?.id_rol; 
+        const listado = await obtenerMiembros(idRed as string,rol)
         const data = {"data":listado,"mensaje":"Miembros encontrados"}
         res.status(200).send(data);
     }catch(e){

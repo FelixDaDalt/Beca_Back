@@ -8,6 +8,6 @@ import { Notificaciones } from "../controllers/notificacion.controller";
 
 const router = Router()
 
-router.get('/listado', comprobarJWT, verificarRoles([1,2,3]), Notificaciones);
+router.get('/listado', comprobarJWT, verificarRoles([0,1,2,3]), Notificaciones);
 
 export {router} //exportamos la rutas

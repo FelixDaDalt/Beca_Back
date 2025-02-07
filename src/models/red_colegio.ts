@@ -35,7 +35,7 @@ export class red_colegio extends Model<red_colegioAttributes, red_colegioCreatio
   bsp!: number;
   bsa!: number;
   bde!: number;
-  borrado?: number;
+  borrado!: number;
 
   // red_colegio belongsTo colegio via id_colegio
   id_colegio_colegio!: colegio;

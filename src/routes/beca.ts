@@ -13,8 +13,8 @@ router.post('/alta', comprobarJWT, verificarRoles([1,2]), AltaBeca);
 router.post('/solicitar', comprobarJWT, verificarRoles([1,2,3]), SolicitarBeca);
 
 
-router.get('/solicitudes', comprobarJWT, verificarRoles([1,2]), SolicitudesBeca);
-router.get('/solicitud-detalle', comprobarJWT, verificarRoles([1,2,3]), SolicitudDetalle);
+router.get('/solicitudes', comprobarJWT, verificarRoles([0,1,2]), SolicitudesBeca);
+router.get('/solicitud-detalle', comprobarJWT, verificarRoles([0,1,2,3]), SolicitudDetalle);
 
 router.get('/mis-solicitudes', comprobarJWT, verificarRoles([1,2,3]), MisSolicitudesBeca);
 router.get('/mi-solicitud-detalle', comprobarJWT, verificarRoles([1,2,3]), MiSolicitudDetalle);

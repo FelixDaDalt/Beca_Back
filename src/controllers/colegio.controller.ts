@@ -195,45 +195,13 @@ const DetalleColegio = async (req:RequestExt,res:Response)=>{
 const BorrarColegio = async (req:RequestExt,res:Response)=>{
     const transaction = await sequelize.transaction();
     try{ 
+        const idUsuario = req.user?.id 
         const { idColegio } = req.query; 
-        const colegio = await borrarColegio(idColegio as string,transaction)
+        const colegio = await borrarColegio(idColegio as string,idUsuario,transaction)
         const data = {
             "data":colegio,
             mensaje: "Colegio Eliminado"
         }
-
-        const idUsuario = req.user?.id 
-        const idRol = req.user?.id_rol
-        
-        await registrarEvento(
-            idUsuario,
-            idRol,
-            2,
-            colegio.id,
-            "Borrar",
-            data.mensaje,
-            requestIp.getClientIp(req) || 'No Disponible',
-            req.headers['user-agent'] || 'No Disponible',
-            transaction,
-            colegio.id
-        );
-
-        const descripcion = `Usuario eliminado por: ${data.mensaje}, (ID: ${colegio.id})`
-        const registrosUsuarios = colegio.usuarios.map((usuario: { id: number}) => {            
-            return registrarEvento(
-                idUsuario,
-                idRol,
-                1, 
-                usuario.id,
-                'Borrar',
-                descripcion,
-                requestIp.getClientIp(req) || '',
-                req.headers['user-agent'] || '',
-                transaction,
-                colegio.id
-            );
-        });
-        await Promise.all(registrosUsuarios)
         await transaction.commit()
         res.status(200).send(data);
     }catch(e){

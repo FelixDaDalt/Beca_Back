@@ -2,7 +2,7 @@ import { colegio } from "../models/colegio"
 import { Op, Sequelize, Transaction } from "sequelize";
 import { red } from "../models/red";
 import { red_colegio } from "../models/red_colegio";
-import { usuario } from "../models/usuario";
+import { beca } from "../models/beca";
 
 interface nuevaRed{
     red:red
@@ -82,7 +82,6 @@ const listadoRedes = async (idColegio?: string) => {
                 {
                     model: red_colegio,
                     as: 'red_colegios',
-                    where:{ borrado:0},
                     required: false,
                     attributes: ['id_colegio', 'id_red', 'anfitrion'],
                     include: [
@@ -142,7 +141,15 @@ const borrarRed = async (idRed:string, transaction:Transaction) => {
             where:{
                 id:idRed,
                 borrado:0
-            }
+            },
+            include:[{
+                model:red_colegio,
+                as:'red_colegios',
+            },
+            {
+                model:beca,
+                as:'becas',
+            }]
         })
 
         if(!redExistente){
@@ -152,11 +159,27 @@ const borrarRed = async (idRed:string, transaction:Transaction) => {
         }
 
 
-        // Cambiar estado de suspensión
+        // Cambiar estado de borrado
         redExistente.borrado = 1;
         
         // Guardar cambios
         await redExistente.save({ transaction });
+
+        if(redExistente.red_colegios && redExistente.red_colegios.length>0){
+            for (const red_colegio of redExistente.red_colegios) {
+                red_colegio.borrado = 1;
+                await red_colegio.save({ transaction });
+            }
+            
+        }
+
+        if(redExistente.becas && redExistente.becas.length>0){
+            for (const beca of redExistente.becas) {
+                beca.borrado = 1;
+                await beca.save({ transaction });
+            }
+            
+        }
 
         // 4. Retornar
         return redExistente
@@ -177,16 +200,15 @@ const obtenerRed = async (idRed:string) => {
             include: [{
                 model: red_colegio,
                 as: 'red_colegios',
-                required: false,
                 where: {
-                    borrado: 0,
                     anfitrion: true
                 },
-                include: [{
-                    model: colegio,
-                    as: 'id_colegio_colegio', // Asegúrate de que esta relación esté configurada
-                    required:true
-                }]
+                    include: [{
+                        model: colegio,
+                        as: 'id_colegio_colegio', // Asegúrate de que esta relación esté configurada
+                        required:true
+                    }],
+                required: true,
             }]
         });
 
@@ -249,23 +271,13 @@ const colegiosDisponibles = async (idRed: string) => {
         const miembros = redEncontrada.red_colegios.map((redColegio: any) => {
             const colegio = redColegio.id_colegio_colegio;
         
-            // Asegúrate de trabajar con un objeto plano, no una instancia de Sequelize
-            const colegioPlano = colegio ? colegio.toJSON() : {};
+
         
-            if (colegioPlano.logo) {
-                colegioPlano.logo = Buffer.from(colegioPlano.logo).toString('base64');
-            }
-        
-            // Agregar la propiedad anfitrion si corresponde
-            if (redColegio.anfitrion) {
-                colegioPlano.anfitrion = 1;
-            }
-        
-            return colegioPlano;
+            return colegio;
         });;
 
         // Obtener IDs de colegios que ya están en la red
-        const idsMiembros = miembros.map((colegio: any) => colegio.id);
+        const idsMiembros = redEncontrada.red_colegios.map((colegio: any) => colegio.id);
 
         // Obtener los colegios que NO están en la red
         const disponibles = await colegio.findAll({
@@ -277,17 +289,11 @@ const colegiosDisponibles = async (idRed: string) => {
             },
         });
 
-        // Convertir logos a Base64 en los colegios disponibles
-        const disponiblesConLogo = disponibles.map((colegio: any) => {
-            if (colegio.logo) {
-                colegio.logo = Buffer.from(colegio.logo).toString('base64');
-            }
-            return colegio;
-        });
+
 
 
         return {
-            disponibles: disponiblesConLogo, // Colegios que no están en la red
+            disponibles: disponibles, // Colegios que no están en la red
             miembros,                         // Colegios que ya están en la red
         };
     } catch (error) {
@@ -485,158 +491,15 @@ const editarMiembrosRed = async (miembros: edicionMiembros, idRol: number, idCol
 };
 
 
-// const suspenderColegio = async (idColegio: string, transaction:Transaction) => {
-//     // Inicia la transacción
-//     try {
-//         if(idColegio){
-//             // 1. Verificar si el colegio existe por CUIT
-//             const colegioExistente = await colegio.findOne({
-//                 where: {
-//                     id: idColegio,
-//                     borrado: 0
-//                 },
-//                 attributes: { exclude: ['borrado'] },
-//                 include: [{
-//                     model: usuario,
-//                     as: 'usuarios',
-//                     where: {
-//                         id_rol: 1,
-//                         borrado: 0
-//                     },
-//                     attributes: { exclude: ['password', 'borrado','id_rol'] },
-//                 }],
-//                 transaction,
-//             });
 
-//             if (!colegioExistente) {
-//                 const error = new Error('No se encontro el colegio');
-//                 (error as any).statusCode = 409; 
-//                 throw error;
-//             }
-
-//             // Cambia el estado de suspensión del colegio
-//             colegioExistente.suspendido = colegioExistente.suspendido ? 0 : 1;
-
-//             // Guarda el cambio en la base de datos
-//             await colegioExistente.save({ transaction });
-
-//             return colegioExistente
-//         }
-
-//         const error = new Error('Se debe proporcionar el ID de colegio para Suspenderlo.');
-//         (error as any).statusCode = 400; 
-//         throw error;
-
-//     } catch (error) {
-//         throw error;
-//     }
-// }
-
-// const listadoColegios = async () => {
-//     try {
-//         const listado = await colegio.findAll({
-//             where: {
-//                 borrado: 0
-//             },
-//             attributes: { exclude: ['borrado'] },
-//             include: [{
-//                 model: usuario,
-//                 as: 'usuarios',
-//                 where: {
-//                     id_rol: 1,
-//                     borrado: 0
-//                 },
-//                 attributes: { exclude: ['password', 'borrado','id_rol'] },
-//             }]
-//         });
-
-//         // Convertir logo a base64 para cada colegio
-//         listado.forEach(colegio => {
-//             if (colegio.logo) {
-//                 colegio.logo = Buffer.from(colegio.logo).toString('base64');
-//             }
-//         });
-
-//         return listado;
-//     } catch (error) {
-//         throw error;
-//     }
-// };
-
-// const detalleColegio = async (idColegio: string) => {
-//     try {
-//         const colegioExistente = await colegio.findOne({
-//             where: {
-//                 id: idColegio,
-//                 borrado: 0,
-//             },
-//             attributes: { exclude:['borrado']},
-//             include: [
-//                 {
-//                     model: usuario,
-//                     as: 'usuarios',
-//                     attributes: ['id','dni','nombre','apellido','id_rol','suspendido'], 
-//                     required: false
-//                 },
-//                 {
-//                     model:zona_localidad,
-//                     as:'zona_localidad',
-//                     required:false,
-//                     attributes:{exclude:['borrado']},
-//                     include:[{
-//                         model:zona,
-//                         as:'zona',
-//                         required:false,
-//                         attributes:{exclude:['borrado']}
-//                     }]
-//                 }
-//             ]
-//         });
-
-//         if (!colegioExistente) {
-//             const error = new Error('No se encontro el colegio');
-//             (error as any).statusCode = 409; 
-//             throw error;
-//         }
-
- 
-//             if (colegioExistente.logo) {
-//                 colegioExistente.logo = Buffer.from(colegioExistente.logo).toString('base64');
-//             }
-     
-
-//         // Clasificar los usuarios según el id_rol
-//         const usuarios = colegioExistente.usuarios.reduce((acc: any, user: any) => {
-//             if (user.id_rol === 1) {
-//                 acc.responsables.push(user);
-//             } else if (user.id_rol === 2) {
-//                 acc.delegados.push(user);
-//             } else if (user.id_rol === 3) {
-//                 acc.autorizados.push(user);
-//             }
-//             return acc;
-//         }, { responsables: [], delegados: [], autorizados: [] });
-
-//         const { usuarios: _, ...colegioSinUsuarios } = colegioExistente.toJSON() as any;
-//         // Estructura de respuesta
-//         return {
-//             colegio: colegioSinUsuarios,
-//             usuarios: usuarios
-//         };
-
-//     } catch (error) {
-//         throw error;
-//     }
-// };
 
 //Miembros
-const obtenerMiembros = async (idRed:string) => {
+const obtenerMiembros = async (idRed:string, rol:number) => {
     try {
+        const whereBorrado: any = rol == 0 ? {id_red: idRed}:{id_red: idRed,borrado:0};
+
         const miembrosEcnontrados = await red_colegio.findAll({
-            where: {
-                id_red: idRed,
-                borrado: 0
-            },
+            where: whereBorrado,
             include: [{
                 model: colegio,
                 as: 'id_colegio_colegio', // Asegúrate de que esta relación esté configurada

@@ -7,6 +7,9 @@ import { zona } from "../models/zona";
 import { Transaction } from "sequelize";
 import { red } from "../models/red";
 import { red_colegio } from "../models/red_colegio";
+import { beca_solicitud } from "../models/beca_solicitud";
+import { beca } from "../models/beca";
+import { BecaService } from "./matrices.service";
 
 interface nuevoColegio{
     colegio:colegio
@@ -207,6 +210,7 @@ const listadoColegios = async () => {
                     id_rol: 1,
                     borrado: 0
                 },
+                required:false,
                 attributes: { exclude: ['password', 'borrado','id_rol'] },
             }]
         });
@@ -313,13 +317,35 @@ const detalleColegio = async (idColegio: string) => {
 };
 
 
-const borrarColegio = async (idColegio: string, transaction:Transaction) => {
+const borrarColegio = async (idColegio: string,idUsuario:number, transaction:Transaction) => {
     try {
             const colegioExistente = await colegio.findOne({
                 where: { id: idColegio, borrado: 0 },
                 include: [{
                     model: usuario,
                     as: 'usuarios',
+                },{
+                    model:red_colegio,
+                    as:'red_colegios'
+                },
+                {
+                    model:beca,
+                    as:'becas',
+                    include:[{
+                        model:beca_solicitud,
+                        as:'beca_solicituds',
+                        include:[{
+                            model:colegio,
+                            as:'id_colegio_solic_colegio',
+                        }]
+                    }]
+                },{
+                    model:beca_solicitud,
+                    as:'beca_solicituds',
+                    include:[{
+                        model:beca,
+                        as:'id_beca_beca'
+                    }]
                 }],
                 transaction,
             });
@@ -331,13 +357,70 @@ const borrarColegio = async (idColegio: string, transaction:Transaction) => {
             }
 
             colegioExistente.borrado = 1;
-             await colegioExistente.save({ transaction });
+            await colegioExistente.save({ transaction });
 
+             //Borramos sus usuarios
+            let admin;
             if (colegioExistente.usuarios && colegioExistente.usuarios.length > 0) {
                 for (const usuario of colegioExistente.usuarios) {
+                    if(usuario.id_rol == 1)
+                        admin = usuario.id
+
                     usuario.borrado = 1;
                     await usuario.save({ transaction });
                 }
+            }
+
+            //borramos sus red_colegios (datos en sus redes)
+            if (colegioExistente.red_colegios && colegioExistente.red_colegios.length > 0) {
+                for (const red of colegioExistente.red_colegios) {
+                    red.borrado = 1;
+                    await red.save({ transaction });
+                }
+            }
+
+            //Solicitudes recibidas
+            if (colegioExistente.becas && colegioExistente.becas.length > 0) {
+                for (const beca of colegioExistente.becas) {
+                    beca.borrado = 1;
+                    await beca.save({ transaction });
+                    //Cambiamos las solicitudes pendiente recibidas que tengan a desestimada
+                    if(beca.beca_solicituds && beca.beca_solicituds.length>0){
+                        for (const solicitud of beca.beca_solicituds) {
+                            if(solicitud.id_estado == 0){
+                                solicitud.id_estado = 1
+                                solicitud.id_resolucion = 3
+                                solicitud.res_comentario = "Colegio Borrado"
+                                solicitud.id_usuario_reso = admin
+                                await solicitud.save({transaction})
+
+                                await BecaService.desestimarBeca(solicitud.id_colegio_solic,idColegio,beca.id_red,transaction)
+                            }
+                        }
+                    }
+                }
+
+               
+            }
+
+            //Solicitudes Enviadas
+            if (colegioExistente.beca_solicituds && colegioExistente.beca_solicituds.length > 0) {
+                for (const solicitud of colegioExistente.beca_solicituds) {
+                    //Cambiamos las solicitudes pendiente recibidas que tengan a desestimada
+                    if(solicitud.id_estado == 0){
+                        solicitud.id_estado = 1
+                        solicitud.id_resolucion = 3
+                        solicitud.res_comentario = "Colegio Borrado"
+                        solicitud.id_usuario_reso = admin
+                        await solicitud.save({transaction})
+
+                        await BecaService.desestimarBeca(idColegio,solicitud.id_beca_beca.id_colegio,solicitud.id_beca_beca.id_red,transaction)
+
+                        
+                    }
+                }
+
+               
             }
 
             return colegioExistente
@@ -345,6 +428,10 @@ const borrarColegio = async (idColegio: string, transaction:Transaction) => {
     } catch (error) {
         throw error;
     }
+
+    
 }
+
+
 
 export{obtenerColegio, suspenderColegio, listadoColegios, altaColegio,detalleColegio, borrarColegio,editarColegio  }
