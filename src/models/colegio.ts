@@ -4,7 +4,6 @@ import type { beca, becaId } from './beca';
 import type { beca_solicitud, beca_solicitudId } from './beca_solicitud';
 import type { red, redId } from './red';
 import type { red_colegio, red_colegioId } from './red_colegio';
-import type { registroeventos, registroeventosId } from './registroeventos';
 import type { usuario, usuarioId } from './usuario';
 import type { zona_localidad, zona_localidadId } from './zona_localidad';
 
@@ -98,18 +97,6 @@ export class colegio extends Model<colegioAttributes, colegioCreationAttributes>
   hasRed_colegio!: Sequelize.HasManyHasAssociationMixin<red_colegio, red_colegioId>;
   hasRed_colegios!: Sequelize.HasManyHasAssociationsMixin<red_colegio, red_colegioId>;
   countRed_colegios!: Sequelize.HasManyCountAssociationsMixin;
-  // colegio hasMany registroeventos via id_colegio
-  registroeventos!: registroeventos[];
-  getRegistroeventos!: Sequelize.HasManyGetAssociationsMixin<registroeventos>;
-  setRegistroeventos!: Sequelize.HasManySetAssociationsMixin<registroeventos, registroeventosId>;
-  addRegistroevento!: Sequelize.HasManyAddAssociationMixin<registroeventos, registroeventosId>;
-  addRegistroeventos!: Sequelize.HasManyAddAssociationsMixin<registroeventos, registroeventosId>;
-  createRegistroevento!: Sequelize.HasManyCreateAssociationMixin<registroeventos>;
-  removeRegistroevento!: Sequelize.HasManyRemoveAssociationMixin<registroeventos, registroeventosId>;
-  removeRegistroeventos!: Sequelize.HasManyRemoveAssociationsMixin<registroeventos, registroeventosId>;
-  hasRegistroevento!: Sequelize.HasManyHasAssociationMixin<registroeventos, registroeventosId>;
-  hasRegistroeventos!: Sequelize.HasManyHasAssociationsMixin<registroeventos, registroeventosId>;
-  countRegistroeventos!: Sequelize.HasManyCountAssociationsMixin;
   // colegio hasMany usuario via id_colegio
   usuarios!: usuario[];
   getUsuarios!: Sequelize.HasManyGetAssociationsMixin<usuario>;

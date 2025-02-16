@@ -30,42 +30,42 @@ class red_colegio extends sequelize_1.Model {
             },
             bp: {
                 type: sequelize_1.DataTypes.INTEGER,
-                allowNull: true,
+                allowNull: false,
                 defaultValue: 0
             },
             btp: {
                 type: sequelize_1.DataTypes.INTEGER,
-                allowNull: true,
+                allowNull: false,
                 defaultValue: 0
             },
             db: {
                 type: sequelize_1.DataTypes.INTEGER,
-                allowNull: true,
+                allowNull: false,
                 defaultValue: 0
             },
             dbu: {
                 type: sequelize_1.DataTypes.INTEGER,
-                allowNull: true,
+                allowNull: false,
                 defaultValue: 0
             },
             dbd: {
                 type: sequelize_1.DataTypes.INTEGER,
-                allowNull: true,
+                allowNull: false,
                 defaultValue: 0
             },
             bsp: {
                 type: sequelize_1.DataTypes.INTEGER,
-                allowNull: true,
+                allowNull: false,
                 defaultValue: 0
             },
             bsa: {
                 type: sequelize_1.DataTypes.INTEGER,
-                allowNull: true,
+                allowNull: false,
                 defaultValue: 0
             },
             bde: {
                 type: sequelize_1.DataTypes.INTEGER,
-                allowNull: true,
+                allowNull: false,
                 defaultValue: 0
             },
             borrado: {

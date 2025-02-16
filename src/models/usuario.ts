@@ -1,10 +1,9 @@
 import * as Sequelize from 'sequelize';
 import { DataTypes, Model, Optional } from 'sequelize';
+import type { actividad_log, actividad_logId } from './actividad_log';
 import type { beca, becaId } from './beca';
 import type { beca_solicitud, beca_solicitudId } from './beca_solicitud';
 import type { colegio, colegioId } from './colegio';
-import type { ingresos_usuarios, ingresos_usuariosId } from './ingresos_usuarios';
-import type { registroeventos, registroeventosId } from './registroeventos';
 import type { roles, rolesId } from './roles';
 
 export interface usuarioAttributes {
@@ -57,6 +56,18 @@ export class usuario extends Model<usuarioAttributes, usuarioCreationAttributes>
   getId_rol_role!: Sequelize.BelongsToGetAssociationMixin<roles>;
   setId_rol_role!: Sequelize.BelongsToSetAssociationMixin<roles, rolesId>;
   createId_rol_role!: Sequelize.BelongsToCreateAssociationMixin<roles>;
+  // usuario hasMany actividad_log via usuario_id
+  actividad_logs!: actividad_log[];
+  getActividad_logs!: Sequelize.HasManyGetAssociationsMixin<actividad_log>;
+  setActividad_logs!: Sequelize.HasManySetAssociationsMixin<actividad_log, actividad_logId>;
+  addActividad_log!: Sequelize.HasManyAddAssociationMixin<actividad_log, actividad_logId>;
+  addActividad_logs!: Sequelize.HasManyAddAssociationsMixin<actividad_log, actividad_logId>;
+  createActividad_log!: Sequelize.HasManyCreateAssociationMixin<actividad_log>;
+  removeActividad_log!: Sequelize.HasManyRemoveAssociationMixin<actividad_log, actividad_logId>;
+  removeActividad_logs!: Sequelize.HasManyRemoveAssociationsMixin<actividad_log, actividad_logId>;
+  hasActividad_log!: Sequelize.HasManyHasAssociationMixin<actividad_log, actividad_logId>;
+  hasActividad_logs!: Sequelize.HasManyHasAssociationsMixin<actividad_log, actividad_logId>;
+  countActividad_logs!: Sequelize.HasManyCountAssociationsMixin;
   // usuario hasMany beca via id_usuario
   becas!: beca[];
   getBecas!: Sequelize.HasManyGetAssociationsMixin<beca>;
@@ -117,30 +128,6 @@ export class usuario extends Model<usuarioAttributes, usuarioCreationAttributes>
   hasId_pariente_beca_solicitud!: Sequelize.HasManyHasAssociationMixin<beca_solicitud, beca_solicitudId>;
   hasId_pariente_beca_solicituds!: Sequelize.HasManyHasAssociationsMixin<beca_solicitud, beca_solicitudId>;
   countId_pariente_beca_solicituds!: Sequelize.HasManyCountAssociationsMixin;
-  // usuario hasMany ingresos_usuarios via id_usuario
-  ingresos_usuarios!: ingresos_usuarios[];
-  getIngresos_usuarios!: Sequelize.HasManyGetAssociationsMixin<ingresos_usuarios>;
-  setIngresos_usuarios!: Sequelize.HasManySetAssociationsMixin<ingresos_usuarios, ingresos_usuariosId>;
-  addIngresos_usuario!: Sequelize.HasManyAddAssociationMixin<ingresos_usuarios, ingresos_usuariosId>;
-  addIngresos_usuarios!: Sequelize.HasManyAddAssociationsMixin<ingresos_usuarios, ingresos_usuariosId>;
-  createIngresos_usuario!: Sequelize.HasManyCreateAssociationMixin<ingresos_usuarios>;
-  removeIngresos_usuario!: Sequelize.HasManyRemoveAssociationMixin<ingresos_usuarios, ingresos_usuariosId>;
-  removeIngresos_usuarios!: Sequelize.HasManyRemoveAssociationsMixin<ingresos_usuarios, ingresos_usuariosId>;
-  hasIngresos_usuario!: Sequelize.HasManyHasAssociationMixin<ingresos_usuarios, ingresos_usuariosId>;
-  hasIngresos_usuarios!: Sequelize.HasManyHasAssociationsMixin<ingresos_usuarios, ingresos_usuariosId>;
-  countIngresos_usuarios!: Sequelize.HasManyCountAssociationsMixin;
-  // usuario hasMany registroeventos via usuario_id
-  registroeventos!: registroeventos[];
-  getRegistroeventos!: Sequelize.HasManyGetAssociationsMixin<registroeventos>;
-  setRegistroeventos!: Sequelize.HasManySetAssociationsMixin<registroeventos, registroeventosId>;
-  addRegistroevento!: Sequelize.HasManyAddAssociationMixin<registroeventos, registroeventosId>;
-  addRegistroeventos!: Sequelize.HasManyAddAssociationsMixin<registroeventos, registroeventosId>;
-  createRegistroevento!: Sequelize.HasManyCreateAssociationMixin<registroeventos>;
-  removeRegistroevento!: Sequelize.HasManyRemoveAssociationMixin<registroeventos, registroeventosId>;
-  removeRegistroeventos!: Sequelize.HasManyRemoveAssociationsMixin<registroeventos, registroeventosId>;
-  hasRegistroevento!: Sequelize.HasManyHasAssociationMixin<registroeventos, registroeventosId>;
-  hasRegistroeventos!: Sequelize.HasManyHasAssociationsMixin<registroeventos, registroeventosId>;
-  countRegistroeventos!: Sequelize.HasManyCountAssociationsMixin;
 
   static initModel(sequelize: Sequelize.Sequelize): typeof usuario {
     return usuario.init({

@@ -45,11 +45,14 @@ const altaResponsable = async (nuevoResponsable: usuario, transaction:Transactio
     }
 };
 
-const listadoResponsables = async (idConsulta:string, idColegio?:number) => {
+const listadoResponsables = async (idConsulta:string, idRol:number, idColegio?:number) => {
     try {
-        const whereCondicion = idColegio 
-            ? { id_colegio: idColegio, id_rol: 1, borrado: 0, id: { [Op.ne]: idConsulta } } 
-            : { id_rol: 1, borrado: 0, id: { [Op.ne]: idConsulta } };
+        const whereCondicion: any = {
+            id_rol: 1,
+            borrado: 0,
+            ...(idColegio && { id_colegio: idColegio }),
+            ...(idRol > 0 && { id: { [Op.ne]: idConsulta } }) // Solo aplica si idRol > 0
+        };
 
         const listado = await usuario.findAll({
             where: whereCondicion,

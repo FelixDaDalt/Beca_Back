@@ -3,8 +3,6 @@ import { handleHttp } from "../utils/error.handle"
 import { RequestExt } from "../middleware/session"
 import sequelize from "../config/database"
 import { altaRed, borrarMiembro, borrarRed, colegiosDisponibles, editarDatosRed, editarMiembrosRed, listadoRedes, meRed, obtenerMiembros, obtenerRed } from "../services/red.service"
-import { registrarEvento } from "../services/registro.service"
-import requestIp from 'request-ip';
 
 const ObtenerRed = async (req:RequestExt,res:Response)=>{
     try{ 
@@ -32,44 +30,7 @@ const AltaRed = async (req: RequestExt, res: Response) => {
           };
 
         const redCreada = await altaRed(redConFoto, transaction);
-        const data = { "data": redCreada, "mensaje": "Red dada de Alta" };
-
-        const idUsuario = req.user?.id;
-        const idRol = req.user?.id_rol;
-
-        await registrarEvento(
-            idUsuario,
-            idRol,
-            3, 
-            redCreada.id, 
-            "Alta",  
-            data.mensaje,  
-            requestIp.getClientIp(req) || '',
-            req.headers['user-agent'] || '',
-            transaction
-        );
-
-        const registrosColegios = colegios.map((colegio: { id: number, anfitrion: number }) => {
-            // Definir la descripción según si es anfitrión o no
-            const descripcion = colegio.anfitrion === 1 
-                ? `Colegio asignado como Anfitrión en la red ${redCreada.nombre}, ID:${redCreada.id}` 
-                : `Colegio vinculado como Miembro en la red ${redCreada.nombre}, ID:${redCreada.id}`;  
-            
-            return registrarEvento(
-                idUsuario,
-                idRol,
-                2, 
-                colegio.id,
-                colegio.anfitrion === 1?"Anfitrion":'Miembro',
-                descripcion, 
-                requestIp.getClientIp(req) || '',
-                req.headers['user-agent'] || '',
-                transaction,
-                colegio.id
-            );
-        });
-
-        await Promise.all(registrosColegios)
+        const data = { "data": redCreada, "mensaje": "Red dada de Alta", "log":`Red(id): ${redCreada.id}` };
 
         await transaction.commit();
         
@@ -104,22 +65,8 @@ const BorrarRed = async (req:RequestExt,res:Response)=>{
         //IMPLEMENTAR DESVINCULACION DE LOS COLEGIOS
         const {idRed} = req.query   
         const red = await borrarRed(idRed as string,transaction)
-        const data = {"data":red, mensaje: "Red Eliminada"}
+        const data = {"data":red, mensaje: "Red Eliminada","log":`/ Red(id):${red.id}`}
 
-        const idRol = req.user?.id_rol
-        const idUsuario = req.user?.id
-        await registrarEvento(
-            idUsuario,
-            idRol,
-            3,
-            red.id,
-            "Borrar",
-            data.mensaje,
-            requestIp.getClientIp(req) || 'No Disponible',
-            req.headers['user-agent'] || 'No Disponible',
-            transaction
-        );
-       //IMPLEMENTAR DESVINCULACION DE LOS COLEGIOS
         await transaction.commit()
 
         res.status(200).send(data)       
@@ -153,21 +100,8 @@ const EditarDatosRed = async (req: RequestExt, res: Response) => {
             transaction
         );
 
-        const data = {"data":datosRed, mensaje: "Red Actualizada"}
+        const data = {"data":datosRed, mensaje: "Red Actualizada","log":`/ Anterior:${estadoAnterior}, Actual:${datosRed}`}
         
-        await registrarEvento(
-            idUsuario,
-            idRol,
-            3,
-            datosRed.id,
-            "Editar",
-            `Red editada ${datosRed.nombre}. ${JSON.stringify(estadoAnterior)}`,
-            requestIp.getClientIp(req) || '',
-            req.headers['user-agent'] || '',
-            transaction,
-            idColegio,
-        );
-       
         await transaction.commit();
         res.status(200).send(data);
     } catch (error) {
@@ -190,43 +124,9 @@ const EditarMiembrosRed = async (req: RequestExt, res: Response) => {
             transaction
         );
 
-        const data = {"data":colegiosAActualizar, colegiosANuevos, mensaje: "Miembros Actualizados"}
-        
-        if (colegiosAActualizar.length > 0) {
-            for (const colegio of colegiosAActualizar) {
-                await registrarEvento(
-                    idUsuario,
-                    idRol,
-                    2,
-                    colegio,
-                    "Miembro",
-                    `Colegio vinculado como Miembro en la red ${red.nombre}`,
-                    requestIp.getClientIp(req) || '',
-                    req.headers['user-agent'] || '',
-                    transaction,
-                    idColegio,
-                );
-            }
-        }
-
-        if (colegiosANuevos.length > 0) {
-            for (const colegio of colegiosANuevos) {
-                await registrarEvento(
-                    idUsuario,
-                    idRol,
-                    2,
-                    colegio.id_colegio,
-                    "Miembro",
-                    `Colegio vinculado como Miembro en la red ${red.nombre}`,
-                    requestIp.getClientIp(req) || '',
-                    req.headers['user-agent'] || '',
-                    transaction,
-                    idColegio,
-                );
-            }
-        }
-        
-        
+        const data = {"data":colegiosAActualizar, colegiosANuevos, mensaje: "Miembros Actualizados",
+            "log":`/ Colegios actualizados:${colegiosAActualizar}, Colegios Nuevos:${colegiosANuevos} `
+        }       
        
         await transaction.commit();
         res.status(200).send(data);
@@ -250,26 +150,11 @@ const ColegiosDisponibles = async (req:RequestExt,res:Response)=>{
 const BorrarMiembro = async (req:RequestExt,res:Response)=>{
     const transaction = await sequelize.transaction()
     try{
-        //IMPLEMENTAR DESVINCULACION DE LOS COLEGIOS
         const {idRed} = req.query
         const {idColegio} = req.query    
         const miembro = await borrarMiembro(idRed as string,idColegio as string, transaction)
-        const data = {"data":miembro, mensaje: "Miembro eliminado"}
+        const data = {"data":miembro, mensaje: "Miembro eliminado", "log":`/ Colegio(id):${miembro.id_colegio}`}
 
-        const idRol = req.user?.id_rol
-        const idUsuario = req.user?.id
-        await registrarEvento(
-            idUsuario,
-            idRol,
-            2,
-            miembro.id_colegio,
-            "Borrar",
-            data.mensaje,
-            requestIp.getClientIp(req) || 'No Disponible',
-            req.headers['user-agent'] || 'No Disponible',
-            transaction
-        );
-       //IMPLEMENTAR DESVINCULACION DE LOS COLEGIOS
         await transaction.commit()
 
         res.status(200).send(data)       

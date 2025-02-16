@@ -2,8 +2,6 @@ import { Request, Response } from "express"
 import { handleHttp } from "../utils/error.handle"
 import { RequestExt } from "../middleware/session"
 import sequelize from "../config/database"
-import { registrarEvento } from "../services/registro.service"
-import requestIp from 'request-ip';
 import { altaBeca, darBajaSolicitud, desestimarSolicitud, listadoBecas, listadoSolicitudes, miSolicitudDetalle, misSolicitudes, resolverSolicitud, solicitarBeca, solicitudDetalle } from "../services/beca.service"
 import { enviarCorreo } from "../services/email.service"
 
@@ -16,7 +14,11 @@ const AltaBeca = async (req: RequestExt, res: Response) => {
         const {idRed} = req.query 
 
         const becaCreada = await altaBeca(req.body, idUsuario,idColegio,idRed as string,transaction);
-        const data = { "data": becaCreada , "mensaje": "Beca publicada" };
+        const data = { 
+            "data": becaCreada , 
+            "mensaje": `Beca publicada`,
+            "log":`/ Cantidad: ${becaCreada.cantidad}`,
+            "idColegio":`${idColegio}` };
 
         await transaction.commit();
         
@@ -24,7 +26,7 @@ const AltaBeca = async (req: RequestExt, res: Response) => {
     } catch (e) {
         // En caso de error, hacer rollback
         await transaction.rollback();
-        handleHttp(res, 'Error al dar de alta la Beca', e);    
+        handleHttp(res, 'Error al publicar la Beca', e);    
     }
 };
 
@@ -59,7 +61,10 @@ const SolicitarBeca = async (req: RequestExt, res: Response) => {
         const {idRed} = req.query 
         
         const becaSolicitada = await solicitarBeca(req.body,idRed as string, idUsuario,idColegio,transaction);
-        const data = { "data": becaSolicitada , "mensaje": "Beca Solicitada" };
+        const data = { "data": becaSolicitada , 
+            "mensaje": "Beca Solicitada",
+            "log":`/ Cantidad: ${becaSolicitada.cantidad}, Beca (id): ${becaSolicitada.solicitudesCreadas[0].id_beca}`,
+            "idColegio":`${idColegio}` };
 
         await transaction.commit();
 
@@ -188,7 +193,10 @@ const ResolverSolicitud = async (req: RequestExt, res: Response) => {
         const {idRed} = req.query     
         
         const solicitudResuelta = await resolverSolicitud(req.body,idRed as string, idUsuario,idColegio,transaction);
-        const data = { "data": solicitudResuelta , "mensaje": "Solicitud Resuelta" };
+        const data = { "data": solicitudResuelta , 
+            "mensaje": "Solicitud Resuelta", 
+            "log":`/ Solicitud (id):${solicitudResuelta.solicitud.id}, Resolucion(id):${solicitudResuelta.solicitud.id_resolucion}`,
+            "idColegio":`${idColegio}` };
 
         await transaction.commit();
 
@@ -197,9 +205,9 @@ const ResolverSolicitud = async (req: RequestExt, res: Response) => {
                 await enviarCorreo(
                     solicitudResuelta.emailDestino,
                     "Solicitud de Beca Resuelta",
-                    `El colegio ${solicitudResuelta.colegioSolicitud} ha resuelto tu solicitud.`,
+                    `El colegio ${solicitudResuelta.colegioSolicitud} ha resuelto su solicitud.`,
                     `<h1>Solicitud de Beca Resuelta</h1>
-                    <p>El colegio ${solicitudResuelta.colegioSolicitud} ha resuelto tu solicitud.</p>`
+                    <p>El colegio ${solicitudResuelta.colegioSolicitud} ha resuelto su solicitud.</p>`
                 );
             } catch (emailError) {
                 console.error("⚠️ Error al enviar el correo:", emailError);
@@ -227,7 +235,10 @@ const DesestimarSolicitud = async (req: RequestExt, res: Response) => {
         
         
         const solicitudDesestimada = await desestimarSolicitud(req.body,idRed as string, idUsuario,idColegio,idRol,transaction);
-        const data = { "data": solicitudDesestimada , "mensaje": "Solicitud Desestimada" };
+        const data = { "data": solicitudDesestimada , 
+            "mensaje": "Solicitud Desestimada", 
+            "log":`/ Solicitud(id):${solicitudDesestimada.solicitud.id}`,
+            "idColegio":`${idColegio}`};
 
         await transaction.commit();
         
@@ -238,7 +249,7 @@ const DesestimarSolicitud = async (req: RequestExt, res: Response) => {
                     "Solicitud de Beca Desestimada",
                     `El colegio ${solicitudDesestimada.colegioSolicitante} ha desestimado su solicitud.`,
                     `<h1>Solicitud de Beca Desestimada</h1>
-                    <p>El colegio ${solicitudDesestimada.colegioSolicitante} ha resuelto tu solicitud.</p>`
+                    <p>El colegio ${solicitudDesestimada.colegioSolicitante} ha desestimado su solicitud.</p>`
                 );
             } catch (emailError) {
                 console.error("⚠️ Error al enviar el correo:", emailError);
@@ -267,7 +278,10 @@ const DarDeBajaSolicitud = async (req: RequestExt, res: Response) => {
         
         
         const solicitudDesestimada = await darBajaSolicitud(req.body,idRed as string, idUsuario,idColegio,idRol,transaction);
-        const data = { "data": solicitudDesestimada , "mensaje": "Solicitud dada de Baja" };
+        const data = { "data": solicitudDesestimada , 
+            "mensaje": "Beca dada de Baja", 
+            "log":`/ Solicitud(id):${solicitudDesestimada.solicitud.id}`,
+            "idColegio":`${idColegio}` };
 
         await transaction.commit();
 

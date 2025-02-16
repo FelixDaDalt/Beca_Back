@@ -3,7 +3,6 @@ import { handleHttp } from "../utils/error.handle"
 import { altaAdministrador,borrarAdministrador,comprobarDisponibilidad, listadoAdministradores, listadoTyc, nuevoTyc, obtenerAdministrador, suspenderAdministrador,me, actualizar} from "../services/admin.service"
 import { RequestExt } from "../middleware/session"
 import sequelize from "../config/database"
-import { registrarEvento } from "../services/registro.service"
 import requestIp from 'request-ip';
 
 //ADMINISTRADORES
@@ -11,23 +10,8 @@ const AltaAdministrador = async (req:RequestExt,res:Response)=>{
     const transaction = await sequelize.transaction();   
     try{        
         const alta = await altaAdministrador(req.body,transaction)
-        const data = {"data":alta,"mensaje":"Administrador dado de alta"}
+        const data = {"data":alta,"mensaje":"Administrador dado de alta","log":`/ Administrador(id):${alta.id}`}
 
-        const idUsuario = req.user?.id
-        const idRol = req.user?.id_rol
-
-        await registrarEvento(
-            idUsuario,
-            idRol,
-            0,
-            alta.id,
-            'Alta',
-            data.mensaje,
-            requestIp.getClientIp(req) || 'No Disponible',
-            req.headers['user-agent'] || 'No Disponible',
-            transaction
-        );
-        
         await transaction.commit(); 
         
         res.status(200).send(data);
@@ -51,27 +35,16 @@ const ObtenerAdministradores = async (req:RequestExt,res:Response)=>{
 const SuspenderAdministrador = async (req:RequestExt,res:Response)=>{
     const transaction = await sequelize.transaction()
     try{
-        const idUsuario = req.user?.id 
+
         const idRol = req.user?.id_rol
         const {idAdmin} = req.query   
         const adminSuspendido = await suspenderAdministrador(idRol, idAdmin as string,transaction)
         const data = {
             "data":adminSuspendido,
             mensaje: "Administrador " + (adminSuspendido.suspendido == 1 ? "Suspendido " : "Activado ")
+            ,"log":`/ Administrador(id):${adminSuspendido.id}`
         }
 
-        
-        await registrarEvento(
-            idUsuario,
-            idRol,
-            0,
-            adminSuspendido.id,
-            adminSuspendido.suspendido == 1 ? "Suspender" : "Activar",
-            data.mensaje,
-            requestIp.getClientIp(req) || 'No Disponible',
-            req.headers['user-agent'] || 'No Disponible',
-            transaction
-        );
         await transaction.commit()
 
         res.status(200).send(data)       
@@ -84,27 +57,17 @@ const SuspenderAdministrador = async (req:RequestExt,res:Response)=>{
 const BorrarAdministrador = async (req:RequestExt,res:Response)=>{
     const transaction = await sequelize.transaction()
     try{
-        const idUsuario = req.user?.id 
+
         const idRol = req.user?.id_rol
         const {idAdmin} = req.query   
 
         const adminBorrado = await borrarAdministrador(idRol, idAdmin as string,transaction)
         const data = {
             "data":adminBorrado,
-            mensaje: "Administrador Eliminado"
+            mensaje: "Administrador Eliminado",
+            "log":`/ Administrador(id):${adminBorrado.id}`
         }
 
-        await registrarEvento(
-            idUsuario,
-            idRol,
-            0,
-            adminBorrado.id,
-            "Borrar",
-            data.mensaje,
-            requestIp.getClientIp(req) || 'No Disponible',
-            req.headers['user-agent'] || 'No Disponible',
-            transaction
-        );
         await transaction.commit()
 
         res.status(200).send(data)       
@@ -139,26 +102,11 @@ const Actualizar = async (req:RequestExt,res:Response)=>{
                 foto: fotoUrl,
             },
         };
-
           
         const usuario = await actualizar(userConFoto.usuario,idUsuario,transaction)
-        const data = {"data":usuario,mensaje: "Datos actualizado"}
 
-        // const idColegio = req.user?.id_colegio
-        // const idUsuario = req.user?.id 
-        
-        // await registrarEvento(
-        //     idUsuario,
-        //     idRol,
-        //     idRol==0?0:1,
-        //     usuario.id,
-        //     usuario.suspendido == 1?"Suspender":"Activar",
-        //     data.mensaje,
-        //     requestIp.getClientIp(req) || 'No Disponible',
-        //     req.headers['user-agent'] || 'No Disponible',
-        //     transaction,
-        //     idColegio
-        // );
+        const data = {"data":usuario,mensaje: "Datos actualizado","log":`/ Administrador(id):${usuario.id}`}
+
         await transaction.commit()
 
         res.status(200).send(data)       
@@ -197,24 +145,14 @@ const Comprobar = async (req:RequestExt,res:Response)=>{
 const NuevoTyc = async (req:RequestExt,res:Response)=>{
     const transaction = await sequelize.transaction(); 
     try{ 
-        const idUsuario = req.user?.id
-        const idRol = req.user?.id_rol
 
         const altaTyc = await nuevoTyc(req.body,transaction)
-        const data = {"data":altaTyc,"mensaje":"Nuevos Terminos y Condiciones creado"}
+        const data = 
+        {
+            "data":altaTyc,
+            "mensaje":"Nuevos Terminos y Condiciones creado",
+            "log":`/ Tyc(id):${altaTyc.id}`,}
         
-        await registrarEvento(
-            idUsuario,
-            idRol,
-            6,
-            altaTyc.id,
-            "Alta",
-            data.mensaje,
-            requestIp.getClientIp(req) || 'No Disponible',
-            req.headers['user-agent'] || 'No Disponible',
-            transaction
-        );
-
         await transaction.commit()
 
         res.status(200).send(data);

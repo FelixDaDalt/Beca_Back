@@ -7,8 +7,6 @@ exports.Me = exports.ObtenerMiembros = exports.EditarMiembrosRed = exports.Borra
 const error_handle_1 = require("../utils/error.handle");
 const database_1 = __importDefault(require("../config/database"));
 const red_service_1 = require("../services/red.service");
-const registro_service_1 = require("../services/registro.service");
-const request_ip_1 = __importDefault(require("request-ip"));
 const ObtenerRed = async (req, res) => {
     try {
         const { idRed } = req.query;
@@ -35,18 +33,7 @@ const AltaRed = async (req, res) => {
             colegios
         };
         const redCreada = await (0, red_service_1.altaRed)(redConFoto, transaction);
-        const data = { "data": redCreada, "mensaje": "Red dada de Alta" };
-        const idUsuario = req.user?.id;
-        const idRol = req.user?.id_rol;
-        await (0, registro_service_1.registrarEvento)(idUsuario, idRol, 3, redCreada.id, "Alta", data.mensaje, request_ip_1.default.getClientIp(req) || '', req.headers['user-agent'] || '', transaction);
-        const registrosColegios = colegios.map((colegio) => {
-            // Definir la descripción según si es anfitrión o no
-            const descripcion = colegio.anfitrion === 1
-                ? `Colegio asignado como Anfitrión en la red ${redCreada.nombre}, ID:${redCreada.id}`
-                : `Colegio vinculado como Miembro en la red ${redCreada.nombre}, ID:${redCreada.id}`;
-            return (0, registro_service_1.registrarEvento)(idUsuario, idRol, 2, colegio.id, colegio.anfitrion === 1 ? "Anfitrion" : 'Miembro', descripcion, request_ip_1.default.getClientIp(req) || '', req.headers['user-agent'] || '', transaction, colegio.id);
-        });
-        await Promise.all(registrosColegios);
+        const data = { "data": redCreada, "mensaje": "Red dada de Alta", "log": `Red(id): ${redCreada.id}` };
         await transaction.commit();
         // 6. Enviar la respuesta
         res.status(200).send(data);
@@ -80,11 +67,7 @@ const BorrarRed = async (req, res) => {
         //IMPLEMENTAR DESVINCULACION DE LOS COLEGIOS
         const { idRed } = req.query;
         const red = await (0, red_service_1.borrarRed)(idRed, transaction);
-        const data = { "data": red, mensaje: "Red Eliminada" };
-        const idRol = req.user?.id_rol;
-        const idUsuario = req.user?.id;
-        await (0, registro_service_1.registrarEvento)(idUsuario, idRol, 3, red.id, "Borrar", data.mensaje, request_ip_1.default.getClientIp(req) || 'No Disponible', req.headers['user-agent'] || 'No Disponible', transaction);
-        //IMPLEMENTAR DESVINCULACION DE LOS COLEGIOS
+        const data = { "data": red, mensaje: "Red Eliminada", "log": `/ Red(id):${red.id}` };
         await transaction.commit();
         res.status(200).send(data);
     }
@@ -109,8 +92,7 @@ const EditarDatosRed = async (req, res) => {
             },
         };
         const { datosRed, estadoAnterior } = await (0, red_service_1.editarDatosRed)(redConFoto.red, idRol, idColegio, transaction);
-        const data = { "data": datosRed, mensaje: "Red Actualizada" };
-        await (0, registro_service_1.registrarEvento)(idUsuario, idRol, 3, datosRed.id, "Editar", `Red editada ${datosRed.nombre}. ${JSON.stringify(estadoAnterior)}`, request_ip_1.default.getClientIp(req) || '', req.headers['user-agent'] || '', transaction, idColegio);
+        const data = { "data": datosRed, mensaje: "Red Actualizada", "log": `/ Anterior:${estadoAnterior}, Actual:${datosRed}` };
         await transaction.commit();
         res.status(200).send(data);
     }
@@ -127,17 +109,9 @@ const EditarMiembrosRed = async (req, res) => {
         const idRol = req.user?.id_rol;
         const idColegio = req.user?.id_colegio;
         const { red, colegiosAActualizar, colegiosANuevos } = await (0, red_service_1.editarMiembrosRed)(req.body, idRol, idColegio, transaction);
-        const data = { "data": colegiosAActualizar, colegiosANuevos, mensaje: "Miembros Actualizados" };
-        if (colegiosAActualizar.length > 0) {
-            for (const colegio of colegiosAActualizar) {
-                await (0, registro_service_1.registrarEvento)(idUsuario, idRol, 2, colegio, "Miembro", `Colegio vinculado como Miembro en la red ${red.nombre}`, request_ip_1.default.getClientIp(req) || '', req.headers['user-agent'] || '', transaction, idColegio);
-            }
-        }
-        if (colegiosANuevos.length > 0) {
-            for (const colegio of colegiosANuevos) {
-                await (0, registro_service_1.registrarEvento)(idUsuario, idRol, 2, colegio.id_colegio, "Miembro", `Colegio vinculado como Miembro en la red ${red.nombre}`, request_ip_1.default.getClientIp(req) || '', req.headers['user-agent'] || '', transaction, idColegio);
-            }
-        }
+        const data = { "data": colegiosAActualizar, colegiosANuevos, mensaje: "Miembros Actualizados",
+            "log": `/ Colegios actualizados:${colegiosAActualizar}, Colegios Nuevos:${colegiosANuevos} `
+        };
         await transaction.commit();
         res.status(200).send(data);
     }
@@ -162,15 +136,10 @@ exports.ColegiosDisponibles = ColegiosDisponibles;
 const BorrarMiembro = async (req, res) => {
     const transaction = await database_1.default.transaction();
     try {
-        //IMPLEMENTAR DESVINCULACION DE LOS COLEGIOS
         const { idRed } = req.query;
         const { idColegio } = req.query;
         const miembro = await (0, red_service_1.borrarMiembro)(idRed, idColegio, transaction);
-        const data = { "data": miembro, mensaje: "Miembro eliminado" };
-        const idRol = req.user?.id_rol;
-        const idUsuario = req.user?.id;
-        await (0, registro_service_1.registrarEvento)(idUsuario, idRol, 2, miembro.id_colegio, "Borrar", data.mensaje, request_ip_1.default.getClientIp(req) || 'No Disponible', req.headers['user-agent'] || 'No Disponible', transaction);
-        //IMPLEMENTAR DESVINCULACION DE LOS COLEGIOS
+        const data = { "data": miembro, mensaje: "Miembro eliminado", "log": `/ Colegio(id):${miembro.id_colegio}` };
         await transaction.commit();
         res.status(200).send(data);
     }
@@ -180,40 +149,6 @@ const BorrarMiembro = async (req, res) => {
     }
 };
 exports.BorrarMiembro = BorrarMiembro;
-// const SuspenderColegio = async (req:RequestExt,res:Response)=>{
-//     const transaction = await sequelize.transaction();
-//     try{ 
-//         const { idColegio } = req.query; 
-//         const colegio = await suspenderColegio(idColegio as string,transaction)
-//         const data = {
-//             "data":colegio,
-//             mensaje: "Colegio " + (colegio.suspendido == 1 ? "Suspension " : "Activacion ") + colegio.nombre
-//         }
-//         const idAdmin = req.user?.id 
-//         const idRol = req.user?.id_rol
-//         const descripcionRegistro = `${(colegio.suspendido == 1 ? "Suspension " : "Activacion ")} de colegio:  ${colegio.cuit} (${colegio.id})`;
-//         await registrarActividad(idAdmin,idRol, descripcionRegistro, transaction);
-//         await transaction.commit()
-//         res.status(200).send(data);
-//     }catch(e){
-//         await transaction.rollback()
-//         handleHttp(res,'Error al suspender el colegio',e)    
-//     }
-// }
-// const DetalleColegio = async (req:RequestExt,res:Response)=>{
-//     try{ 
-//         const idRol = req.user?.id_rol;
-//         let idColegio = req.query.id
-//         if (idRol > 0) {
-//             idColegio = req.user?.id_colegio
-//         }
-//         const detalle = await detalleColegio(idColegio as string)
-//         const data = {"data":detalle,"mensaje":"Detalle del colegio"}
-//         res.status(200).send(data);
-//     }catch(e){
-//         handleHttp(res,'Error al obtener el Detalle del colegio',e)    
-//     }
-// }
 /// MIEMBROS
 const Me = async (req, res) => {
     try {
@@ -231,7 +166,8 @@ exports.Me = Me;
 const ObtenerMiembros = async (req, res) => {
     try {
         const { idRed } = req.query;
-        const listado = await (0, red_service_1.obtenerMiembros)(idRed);
+        const rol = req.user?.id_rol;
+        const listado = await (0, red_service_1.obtenerMiembros)(idRed, rol);
         const data = { "data": listado, "mensaje": "Miembros encontrados" };
         res.status(200).send(data);
     }

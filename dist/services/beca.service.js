@@ -12,26 +12,29 @@ const beca_resolucion_1 = require("../models/beca_resolucion");
 const beca_estado_1 = require("../models/beca_estado");
 const zona_localidad_1 = require("../models/zona_localidad");
 const zona_1 = require("../models/zona");
-const listadoBecas = async (idRed, idColegio, transaction) => {
+const matrices_service_1 = require("./matrices.service");
+const listadoBecas = async (idRed, idColegio, rol, transaction) => {
     try {
-        const redColegio = await red_colegio_1.red_colegio.findOne({
-            where: {
-                id_colegio: idColegio,
-                id_red: idRed,
-                borrado: 0
-            },
-            transaction // Asegúrate de pasar la transacción
-        });
-        if (!redColegio) {
-            const error = new Error('El colegio no pertenece a la Red');
-            error.statusCode = 400;
-            throw error;
+        if (rol != 0) {
+            const redColegio = await red_colegio_1.red_colegio.findOne({
+                where: {
+                    id_colegio: idColegio,
+                    id_red: idRed,
+                    borrado: 0
+                },
+                transaction // Asegúrate de pasar la transacción
+            });
+            if (!redColegio) {
+                const error = new Error('El colegio no pertenece a la Red');
+                error.statusCode = 400;
+                throw error;
+            }
         }
         // Verifica red_colegio
         const listado = await beca_1.beca.findAll({
             where: {
                 id_red: idRed,
-                borrado: 0
+                ...(rol == 0 ? {} : { borrado: 0 })
             },
             attributes: ['id', 'cantidad', 'fecha_hora'],
             include: [
@@ -39,7 +42,7 @@ const listadoBecas = async (idRed, idColegio, transaction) => {
                     model: colegio_1.colegio,
                     as: 'id_colegio_colegio',
                     required: true,
-                    attributes: { exclude: ['borrado', 'suspendido', 'terminos'] }
+                    attributes: { exclude: ['suspendido', 'terminos'] }
                 },
                 {
                     model: usuario_1.usuario,
@@ -117,32 +120,27 @@ const altaBeca = async (altaBeca, idUsuario, idColegio, idRed, transaction) => {
         }
         // Verifica si existe la beca
         const becaActualizar = await beca_1.beca.findOne({
-            where: {
-                id_red: redColegio.id_red,
-                id_colegio: redColegio.id_colegio,
-                borrado: 0
-            },
-            transaction // Pasa la transacción
+            where: { id_red: redColegio.id_red, id_colegio: redColegio.id_colegio, borrado: 0 },
+            transaction
         });
         if (!becaActualizar) {
             // Crear nueva beca
-            const nuevaBeca = {
+            const nuevaBeca = await beca_1.beca.create({
                 id_red: Number(idRed),
                 id_colegio: Number(idColegio),
                 id_usuario: Number(idUsuario),
                 cantidad: altaBeca.cantidad
-            };
-            const becaCreada = await beca_1.beca.create(nuevaBeca, { transaction });
-            await actualizarMatricesAlta(redColegio, altaBeca, transaction);
-            await redColegio.save({ transaction });
-            return becaCreada;
+            }, { transaction });
+            // 🔥 Usamos el servicio para actualizar matrices
+            await matrices_service_1.BecaService.altaBeca(idColegio, idRed, altaBeca.cantidad, transaction);
+            return nuevaBeca;
         }
         // Actualizar beca existente
         becaActualizar.cantidad = altaBeca.cantidad;
         becaActualizar.fecha_hora = new Date();
         await becaActualizar.save({ transaction });
-        await actualizarMatricesAlta(redColegio, altaBeca, transaction);
-        await redColegio.save({ transaction });
+        // 🔥 Usamos el servicio para actualizar matrices
+        await matrices_service_1.BecaService.altaBeca(idColegio, idRed, altaBeca.cantidad, transaction);
         return becaActualizar;
     }
     catch (error) {
@@ -152,9 +150,13 @@ const altaBeca = async (altaBeca, idUsuario, idColegio, idRed, transaction) => {
 exports.altaBeca = altaBeca;
 const solicitarBeca = async (solicitud, idRed, idUsuario, idColegio, transaction) => {
     try {
-        // Verifica que el colegio solicitate pertenece a la red
+        // Verifica que el colegio solicitante pertenece a la red
         const redColegioSolicitante = await red_colegio_1.red_colegio.findOne({
             where: { id_colegio: idColegio, id_red: idRed, borrado: 0 },
+            include: [{
+                    model: colegio_1.colegio,
+                    as: 'id_colegio_colegio'
+                }],
             transaction
         });
         if (!redColegioSolicitante) {
@@ -164,7 +166,14 @@ const solicitarBeca = async (solicitud, idRed, idUsuario, idColegio, transaction
         }
         // Verifica que la beca solicitada existe
         const becaSolicitada = await beca_1.beca.findOne({
-            where: { id: solicitud.id_beca },
+            where: {
+                id: solicitud.id_beca,
+                borrado: 0
+            },
+            include: [{
+                    model: colegio_1.colegio,
+                    as: 'id_colegio_colegio'
+                }],
             transaction
         });
         if (!becaSolicitada) {
@@ -191,62 +200,80 @@ const solicitarBeca = async (solicitud, idRed, idUsuario, idColegio, transaction
         // Crear las solicitudes para cada alumno
         const solicitudes = solicitud.alumnos.map(alumno => ({
             id_beca: solicitud.id_beca,
+            id_resolucion: 0,
             id_colegio_solic: Number(idColegio),
             id_usuario_solic: Number(idUsuario),
             alumno_nombre: alumno.nombre,
             alumno_apellido: alumno.apellido,
             alumno_fecha: alumno.fecha_nacimiento,
             alumno_dni: alumno.dni,
-            detalle: alumno.detalle
+            detalle: alumno.detalle,
+            id_pariente: alumno.id_pariente ? alumno.id_pariente : Number(idUsuario)
         }));
         // Inserta todas las solicitudes de una sola vez y devuelve las creadas
         const solicitudesCreadas = await beca_solicitud_1.beca_solicitud.bulkCreate(solicitudes, { transaction, returning: true });
-        // Actualiza las matrices para ambos colegios
-        await actualizarMatricesSolicitud(redColegioSolicitante, redColegioReceptor, solicitudes.length, transaction);
-        return solicitudesCreadas;
+        // Usa BecaService para actualizar las matrices
+        await matrices_service_1.BecaService.solicitarBeca(Number(idColegio), becaSolicitada.id_colegio, solicitudes.length, Number(idRed), transaction);
+        return {
+            solicitudesCreadas,
+            emailDestino: becaSolicitada.id_colegio_colegio.email,
+            cantidad: solicitudes.length,
+            colegioSolicitante: redColegioSolicitante.id_colegio_colegio.nombre
+        };
     }
     catch (error) {
         throw error;
     }
 };
 exports.solicitarBeca = solicitarBeca;
-const listadoSolicitudes = async (idRed, idColegio, idEstado, transaction) => {
+//SOLICITUDES QUE RECIBO
+const listadoSolicitudes = async (idRed, idColegio, idEstado, idRol, transaction) => {
     try {
-        const listado = await beca_solicitud_1.beca_solicitud.findAll({
-            where: {
-                id_estado: idEstado
-            },
-            include: [{
-                    model: beca_1.beca,
-                    as: 'id_beca_beca',
-                    where: {
-                        id_colegio: idColegio,
-                        id_red: idRed
-                    },
-                    required: true
+        let includeBeca = [{
+                model: beca_1.beca,
+                as: 'id_beca_beca',
+                where: {
+                    id_red: idRed,
+                    ...(idRol !== 0 && { id_colegio: idColegio })
                 },
+                required: true,
+                // Aquí agregamos el include de 'colegio' si el rol es administrador
+                include: idRol === 0 ? [{
+                        model: colegio_1.colegio,
+                        as: 'id_colegio_colegio',
+                        attributes: ['nombre'],
+                        required: true
+                    }] : [] // Si no es administrador, no incluye el colegio solicitado
+            }];
+        const listado = await beca_solicitud_1.beca_solicitud.findAll({
+            where: idEstado >= 0 ? { id_estado: idEstado } : {},
+            include: [
+                ...includeBeca,
                 {
-                    model: colegio_1.colegio,
-                    as: 'id_colegio_solic_colegio',
-                    attributes: ['nombre'],
-                    required: true
-                }, {
                     model: usuario_1.usuario,
                     as: 'id_usuario_solic_usuario',
                     attributes: ['nombre', 'apellido'],
                     required: true,
                 },
                 {
+                    model: colegio_1.colegio,
+                    as: 'id_colegio_solic_colegio',
+                    attributes: ['nombre'],
+                    required: true,
+                },
+                {
                     model: beca_estado_1.beca_estado,
                     as: 'id_estado_beca_estado',
                     required: true
-                }],
+                }
+            ],
             transaction // Asegúrate de pasar la transacción
         });
         const procesado = listado.map(item => {
             return {
                 id: item.id,
                 fecha: item.fecha_hora,
+                sinLeer: item.sinLeer,
                 estado: {
                     id: item.id_estado,
                     nombre: item.id_estado_beca_estado.nombre
@@ -256,6 +283,8 @@ const listadoSolicitudes = async (idRed, idColegio, idEstado, transaction) => {
                     usuario: item.id_usuario_solic_usuario.apellido + ', ' + item.id_usuario_solic_usuario.nombre,
                     alumno: item.alumno_apellido + ', ' + item.alumno_nombre
                 },
+                // Agregar colegio solicitado si es administrador
+                colegioSolicitado: idRol === 0 ? item.id_beca_beca.id_colegio_colegio.nombre : null
             };
         });
         return procesado;
@@ -265,7 +294,7 @@ const listadoSolicitudes = async (idRed, idColegio, idEstado, transaction) => {
     }
 };
 exports.listadoSolicitudes = listadoSolicitudes;
-const solicitudDetalle = async (idSolicitud, idRed, idColegio, transaction) => {
+const solicitudDetalle = async (idSolicitud, idRed, idColegio, idRol, transaction) => {
     try {
         const solicitud = await beca_solicitud_1.beca_solicitud.findOne({
             where: {
@@ -275,9 +304,14 @@ const solicitudDetalle = async (idSolicitud, idRed, idColegio, transaction) => {
                     model: beca_1.beca,
                     as: 'id_beca_beca',
                     where: {
-                        id_colegio: idColegio,
+                        ...(idRol != 0 ? { id_colegio: idColegio } : {}),
                         id_red: idRed
                     },
+                    include: [{
+                            model: colegio_1.colegio,
+                            as: 'id_colegio_colegio',
+                            attributes: { exclude: ['terminos', 'suspendido', 'borrado'] },
+                        }],
                     required: true
                 },
                 {
@@ -330,10 +364,15 @@ const solicitudDetalle = async (idSolicitud, idRed, idColegio, transaction) => {
             error.statusCode = 400;
             throw error;
         }
+        if (solicitud.sinLeer == 1 && idRol != 0) {
+            solicitud.sinLeer = 0;
+            await solicitud.save({ transaction });
+        }
         const procesado = {
             id: solicitud?.id,
             detalle: solicitud?.detalle,
             fecha: solicitud?.fecha_hora,
+            sinLeer: solicitud.sinLeer,
             estado: {
                 id: solicitud?.id_estado,
                 nombre: solicitud?.id_estado_beca_estado.nombre
@@ -341,7 +380,7 @@ const solicitudDetalle = async (idSolicitud, idRed, idColegio, transaction) => {
             resolucion: {
                 id: solicitud?.id_resolucion,
                 nombre: solicitud?.id_resolucion_beca_resolucion.nombre,
-                conResolucion: solicitud?.id_resolucion > 0,
+                conResolucion: solicitud?.id_resolucion > 0 && solicitud.id_estado != 4,
                 detalle: {
                     usuario: solicitud?.id_usuario_reso_usuario,
                     fecha: solicitud?.reso_fecha_hora,
@@ -358,6 +397,9 @@ const solicitudDetalle = async (idSolicitud, idRed, idColegio, transaction) => {
                 dni: solicitud?.alumno_dni,
                 nacimiento: solicitud?.alumno_fecha,
             },
+            solicitado: {
+                colegio: idRol === 0 ? solicitud.id_beca_beca.id_colegio_colegio : null,
+            },
             baja: solicitud?.id_estado == 3,
             ...(solicitud?.id_estado === 3 && { detalle_baja: {
                     usuario: solicitud.id_usuario_baja_usuario,
@@ -372,12 +414,13 @@ const solicitudDetalle = async (idSolicitud, idRed, idColegio, transaction) => {
     }
 };
 exports.solicitudDetalle = solicitudDetalle;
+//SOLICITUDES QUE YO ENVIE
 const misSolicitudes = async (idRed, idColegio, idRol, idUsuario, idEstado, transaction) => {
     try {
         // Define la condición inicial de la consulta
         const whereCondition = {
             id_colegio_solic: idColegio,
-            id_estado: idEstado
+            ...(idEstado >= 0 && { id_estado: idEstado })
         };
         // Agregar filtro por usuario si el idRol es mayor a 2
         if (parseInt(idRol) > 2) {
@@ -409,7 +452,7 @@ const misSolicitudes = async (idRed, idColegio, idRol, idUsuario, idEstado, tran
                     model: beca_estado_1.beca_estado,
                     as: 'id_estado_beca_estado',
                     required: true,
-                },
+                }
             ],
             transaction, // Asegúrate de pasar la transacción
         });
@@ -417,6 +460,7 @@ const misSolicitudes = async (idRed, idColegio, idRol, idUsuario, idEstado, tran
             return {
                 id: item.id,
                 fecha: item.fecha_hora,
+                sinLeer: item.sinLeerSolicitante,
                 estado: {
                     id: item.id_estado,
                     nombre: item.id_estado_beca_estado.nombre,
@@ -513,6 +557,12 @@ const miSolicitudDetalle = async (idSolicitud, idRed, idColegio, idRol, idUsuari
                     attributes: ['nombre', 'apellido', 'telefono', 'celular', 'email', 'foto'],
                     required: false,
                 },
+                {
+                    model: usuario_1.usuario,
+                    as: 'id_pariente_usuario',
+                    attributes: ['nombre', 'apellido'],
+                    required: true
+                }
             ],
             transaction,
         });
@@ -521,10 +571,15 @@ const miSolicitudDetalle = async (idSolicitud, idRed, idColegio, idRol, idUsuari
             error.statusCode = 400;
             throw error;
         }
+        if (solicitud.sinLeerSolicitante == 1) {
+            solicitud.sinLeerSolicitante = 0;
+            await solicitud.save({ transaction });
+        }
         const procesado = {
             id: solicitud?.id,
             detalle: solicitud?.detalle,
             fecha: solicitud?.fecha_hora,
+            sinLeer: solicitud?.sinLeerSolicitante,
             estado: {
                 id: solicitud?.id_estado,
                 nombre: solicitud?.id_estado_beca_estado.nombre,
@@ -532,7 +587,7 @@ const miSolicitudDetalle = async (idSolicitud, idRed, idColegio, idRol, idUsuari
             resolucion: {
                 id: solicitud?.id_resolucion,
                 nombre: solicitud?.id_resolucion_beca_resolucion.nombre,
-                conResolucion: solicitud?.id_resolucion > 0,
+                conResolucion: solicitud?.id_resolucion > 0 && solicitud.id_estado != 4,
                 detalle: {
                     usuario: solicitud?.id_usuario_reso_usuario,
                     fecha: solicitud?.reso_fecha_hora,
@@ -541,6 +596,7 @@ const miSolicitudDetalle = async (idSolicitud, idRed, idColegio, idRol, idUsuari
             },
             solicitante: {
                 usuario: solicitud?.id_usuario_solic_usuario,
+                pariente: solicitud?.id_pariente_usuario.apellido + ', ' + solicitud?.id_pariente_usuario.nombre,
             },
             solicitud: {
                 colegio: solicitud?.id_beca_beca.id_colegio_colegio
@@ -577,9 +633,21 @@ const resolverSolicitud = async (resolver, idRed, idUsuario, idColegio, transact
                 {
                     model: beca_1.beca,
                     as: 'id_beca_beca',
-                    where: { id_colegio: idColegio, id_red: idRed },
+                    where: {
+                        id_colegio: idColegio,
+                        id_red: idRed,
+                        borrado: 0
+                    },
                     required: true,
+                    include: [{
+                            model: colegio_1.colegio,
+                            as: 'id_colegio_colegio'
+                        }]
                 },
+                {
+                    model: colegio_1.colegio,
+                    as: 'id_colegio_solic_colegio'
+                }
             ],
             transaction,
         });
@@ -592,14 +660,14 @@ const resolverSolicitud = async (resolver, idRed, idUsuario, idColegio, transact
             const fecha = new Date();
             // Resolución aprobada
             await solicitud.update({
+                sinLeerSolicitante: 1,
                 id_estado: estadoAprobada,
                 id_resolucion: resolver.id_resolucion,
                 id_usuario_reso: Number(idUsuario),
                 reso_fecha_hora: fecha,
                 res_comentario: resolver.res_comentario,
             }, { transaction });
-            const redColegio = await obtenerRedColegio(idColegio, idRed, transaction);
-            await actualizarRedColegio(redColegio, -1, 1, transaction);
+            await matrices_service_1.BecaService.aprobarBeca(idColegio, idRed, transaction);
         }
         else if (resolver.id_resolucion === 2) {
             const fecha = new Date();
@@ -610,15 +678,11 @@ const resolverSolicitud = async (resolver, idRed, idUsuario, idColegio, transact
                 id_usuario_reso: Number(idUsuario),
                 reso_fecha_hora: fecha,
                 res_comentario: resolver.res_comentario,
+                sinLeerSolicitante: 1
             }, { transaction });
-            const redColegio = await obtenerRedColegio(idColegio, idRed, transaction);
-            await actualizarRedColegio(redColegio, -1, 0, transaction);
-            const redColegioSolicitante = await obtenerRedColegio(solicitud.id_colegio_solic, idRed, transaction);
-            const dbuTotal = redColegioSolicitante.dbu - 1;
-            const dbdTotal = redColegioSolicitante.db - dbuTotal;
-            await redColegioSolicitante.update({ dbu: dbuTotal, dbd: dbdTotal }, { transaction });
+            await matrices_service_1.BecaService.rechazarBeca(solicitud.id_colegio_solic, idColegio, idRed, transaction);
         }
-        return solicitud;
+        return { solicitud, emailDestino: solicitud.id_colegio_solic_colegio.email, colegioSolicitud: solicitud.id_beca_beca.id_colegio_colegio.nombre };
     }
     catch (error) {
         throw error;
@@ -642,8 +706,18 @@ const desestimarSolicitud = async (desestimar, idRed, idUsuario, idColegio, idRo
                     model: beca_1.beca,
                     as: 'id_beca_beca',
                     where: { id_red: idRed },
+                    include: [
+                        {
+                            model: colegio_1.colegio,
+                            as: 'id_colegio_colegio'
+                        }
+                    ],
                     required: true,
                 },
+                {
+                    model: colegio_1.colegio,
+                    as: 'id_colegio_solic_colegio'
+                }
             ],
             transaction,
         });
@@ -656,18 +730,14 @@ const desestimarSolicitud = async (desestimar, idRed, idUsuario, idColegio, idRo
         // Resolución aprobada
         await solicitud.update({
             id_estado: 1,
-            id_resolucion: desestimar.id_resolucion,
+            id_resolucion: 3,
             id_usuario_reso: Number(idUsuario),
             reso_fecha_hora: fecha,
             res_comentario: desestimar.res_comentario,
+            sinLeer: 1
         }, { transaction });
-        const redColegio = await obtenerRedColegio(idColegio, idRed, transaction);
-        const dbuTotal = redColegio.dbu - 1;
-        const dbdTotal = redColegio.db - dbuTotal;
-        await redColegio.update({ dbu: dbuTotal, dbd: dbdTotal }, { transaction });
-        const redColegioSolicitado = await obtenerRedColegio(solicitud.id_beca_beca.id_colegio, idRed, transaction);
-        await actualizarRedColegio(redColegioSolicitado, -1, 0, transaction);
-        return solicitud;
+        await matrices_service_1.BecaService.desestimarBeca(idColegio, solicitud.id_beca_beca.id_colegio, idRed, transaction);
+        return { solicitud, emailDestino: solicitud.id_beca_beca.id_colegio_colegio.email, colegioSolicitante: solicitud.id_colegio_solic_colegio.nombre };
     }
     catch (error) {
         throw error;
@@ -676,9 +746,6 @@ const desestimarSolicitud = async (desestimar, idRed, idUsuario, idColegio, idRo
 exports.desestimarSolicitud = desestimarSolicitud;
 const darBajaSolicitud = async (desestimar, idRed, idUsuario, idColegio, idRol, transaction) => {
     try {
-        const whereCondition = {
-            id: desestimar.id_solicitud,
-        };
         // Agregar filtro por usuario si el idRol es mayor a 2
         if (parseInt(idRol) > 2) {
             const error = new Error('No puede dar de baja una Beca');
@@ -695,8 +762,18 @@ const darBajaSolicitud = async (desestimar, idRed, idUsuario, idColegio, idRol, 
                     model: beca_1.beca,
                     as: 'id_beca_beca',
                     where: { id_red: idRed },
+                    include: [
+                        {
+                            model: colegio_1.colegio,
+                            as: 'id_colegio_colegio'
+                        }
+                    ],
                     required: true,
                 },
+                {
+                    model: colegio_1.colegio,
+                    as: 'id_colegio_solic_colegio'
+                }
             ],
             transaction,
         });
@@ -706,97 +783,30 @@ const darBajaSolicitud = async (desestimar, idRed, idUsuario, idColegio, idRol, 
             throw error;
         }
         const fecha = new Date();
-        // Resolución aprobada
+        // Pendiente de baja
         await solicitud.update({
             id_estado: 3,
-            id_resolucion: desestimar.id_resolucion,
             baja_fecha_hora: fecha,
             id_usuario_baja: Number(idUsuario),
             baja_comentario: desestimar.baja_comentario,
+            sinLeerSolicitante: 1
         }, { transaction });
-        const redColegioSolicitado = await obtenerRedColegio(solicitud.id_colegio_solic, idRed, transaction);
-        const dbuTotal = redColegioSolicitado.dbu - 1;
-        const dbdTotal = redColegioSolicitado.db - dbuTotal;
-        await redColegioSolicitado.update({ dbu: dbuTotal, dbd: dbdTotal }, { transaction });
+        // const redColegioSolicitado = await obtenerRedColegio(solicitud.id_colegio_solic, idRed, transaction);
+        // const dbuTotal = redColegioSolicitado.dbu - 1;
+        // const dbdTotal = redColegioSolicitado.db - dbuTotal;
+        // await redColegioSolicitado.update(
+        //     { dbu: dbuTotal, dbd: dbdTotal },
+        //     { transaction }
+        // );
         // const redColegio = await obtenerRedColegio(idColegio, idRed, transaction);
-        // await actualizarRedColegio(redColegioSolicitado, -1, 0, transaction);
-        return solicitud;
+        // await actualizarRedColegio(redColegio, -1, 0, transaction);
+        return { solicitud,
+            emailDestino: solicitud.id_colegio_solic_colegio.email,
+            colegio: solicitud.id_beca_beca.id_colegio_colegio.nombre
+        };
     }
     catch (error) {
         throw error;
     }
 };
 exports.darBajaSolicitud = darBajaSolicitud;
-///ACTUALIZAR MATRICES
-//ALTA
-const actualizarMatricesAlta = async (redColegio, // Registro del colegio en la red
-altaBeca, // Datos de la beca a publicar
-transaction) => {
-    try {
-        // Variables base
-        const BO = altaBeca.cantidad; // Becas ofrecidas
-        const DBU = redColegio.dbu || 0; // Derecho a Becas Utilizadas
-        const BSP = redColegio.bsp || 0; // Becas Solicitadas Propias
-        const BSA = redColegio.bsa || 0; // Becas Solicitadas Aprobadas
-        // Cálculos
-        const BTP = BO + 2; // Becas Totales Publicadas
-        const DB = BO; // Derecho a Becas
-        const DBD = DB - DBU; // Derecho a Becas Disponibles
-        const BDE = BTP - BSP - BSA; // Becas Disponibles en total
-        // Actualizar las métricas en red_colegio
-        redColegio.bp = BO; // Becas Publicadas
-        redColegio.btp = BTP; // Becas Totales Publicadas
-        redColegio.db = DB; // Derecho a Becas
-        redColegio.dbd = DBD; // Derecho a Becas Disponibles
-        redColegio.bde = BDE; // Becas Disponibles
-        // Guardar los cambios en la base de datos
-        await redColegio.save({ transaction });
-        return redColegio;
-    }
-    catch (error) {
-        throw new Error(`Error al actualizar las matrices del colegio: ${error.message}`);
-    }
-};
-//SOLICITUD
-const actualizarMatricesSolicitud = async (redColegioSolicitante, // Colegio que solicita la beca
-redColegioReceptor, // Colegio que recibe la solicitud
-cantidadSolicitudes, // Número de solicitudes realizadas
-transaction) => {
-    try {
-        // Actualizar el colegio que solicita (incrementar DBU - Derecho a Becas Utilizadas)
-        redColegioSolicitante.dbu = (redColegioSolicitante.dbu || 0) + cantidadSolicitudes;
-        // Calcular DB disponibles después del incremento en DBU
-        redColegioSolicitante.dbd = (redColegioSolicitante.db || 0) - redColegioSolicitante.dbu;
-        // Actualizar el colegio que recibe la solicitud (incrementar BSP - Becas Solicitadas Propias)
-        redColegioReceptor.bsp = (redColegioReceptor.bsp || 0) + cantidadSolicitudes;
-        // Calcular BDE (Becas Disponibles en la red) después del incremento en BSP
-        redColegioReceptor.bde = (redColegioReceptor.btp || 0) - redColegioReceptor.bsp - (redColegioReceptor.bsa || 0);
-        // Guardar cambios para ambos colegios
-        await Promise.all([
-            redColegioSolicitante.save({ transaction }),
-            redColegioReceptor.save({ transaction })
-        ]);
-        return { redColegioSolicitante, redColegioReceptor };
-    }
-    catch (error) {
-        throw new Error(`Error al actualizar las matrices de solicitud: ${error.message}`);
-    }
-};
-const actualizarRedColegio = async (redColegio, bspDelta, bsaDelta, transaction) => {
-    const bspTotal = redColegio.bsp + bspDelta;
-    const bsaTotal = redColegio.bsa + bsaDelta;
-    const bdeTotal = redColegio.btp - bsaTotal - bspTotal;
-    await redColegio.update({ bsp: bspTotal, bsa: bsaTotal, bde: bdeTotal }, { transaction });
-};
-const obtenerRedColegio = async (idColegio, idRed, transaction) => {
-    const redColegio = await red_colegio_1.red_colegio.findOne({
-        where: { id_colegio: idColegio, id_red: idRed },
-        transaction,
-    });
-    if (!redColegio) {
-        const error = new Error(`No se encontró la red colegio con id_colegio ${idColegio} e id_red ${idRed}`);
-        error.statusCode = 400;
-        throw error;
-    }
-    return redColegio;
-};

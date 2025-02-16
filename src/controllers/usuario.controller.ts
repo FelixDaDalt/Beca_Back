@@ -3,8 +3,7 @@ import { handleHttp } from "../utils/error.handle"
 import { RequestExt } from "../middleware/session"
 import { aceptarTyc, borrar, cambiarPassword, editar, me, obtenerTyc, obtenerUsuario, resetarPass, suspender} from "../services/usuario.service"
 import sequelize from "../config/database"
-import { registrarEvento } from "../services/registro.service"
-import requestIp from 'request-ip';
+
 
 
 const CambiarPassword = async (req:RequestExt,res:Response)=>{
@@ -14,21 +13,12 @@ const CambiarPassword = async (req:RequestExt,res:Response)=>{
         const idRol = req.user?.id_rol
         const idColegio = req.user?.id_colegio
         const respuesta = await cambiarPassword(req.body.password,idUsuario,idRol,transaction)
-        const data = {"data":respuesta,"mensaje":"Contraseña Actualizada"}
-
-        await registrarEvento(
-            idUsuario,
-            idRol,
-            idRol==0?0:1,
-            idUsuario,
-            "Password",
-            data.mensaje,
-            requestIp.getClientIp(req) || 'No Disponible',
-            req.headers['user-agent'] || 'No Disponible',
-            transaction,
-            idColegio
-        );
-        
+        const data = {
+            "data":respuesta,
+            "mensaje":"Contraseña Actualizada",
+            "log":`/ Usuario(id):${respuesta.datos.id}`,
+            "idColegio":`${idColegio}`}
+       
         await transaction.commit();
 
         res.status(200).send(data);
@@ -42,25 +32,13 @@ const AceptarTyc = async (req:RequestExt,res:Response)=>{
     const transaction = await sequelize.transaction()
     try{
         const idUsuario = req.user?.id
-        const idRol = req.user?.id_rol
-        const idColegio = req.user?.id_colegio
         const pass = req.body?.password
         const aceptar = await aceptarTyc(idUsuario,pass,transaction)
-        const data = {"data":aceptar,"mensaje":"Terminos y Condiciones Aceptados"}
-        
-        await registrarEvento(
-            idUsuario,
-            idRol,
-            1,
-            idUsuario,
-            "Aceptar",
-            data.mensaje,
-            requestIp.getClientIp(req) || 'No Disponible',
-            req.headers['user-agent'] || 'No Disponible',
-            transaction,
-            idColegio
-        );
-        
+        const data = {"data":aceptar,
+            "mensaje":"Terminos y Condiciones Aceptados",
+            "log":`/ Usuario(id):${aceptar.datos.id}`,
+            "idColegio":`${aceptar.datos.id_colegio}`}
+                
         await transaction.commit();
        
         res.status(200).send(data)       
@@ -101,6 +79,7 @@ const ResetarPass = async (req:RequestExt,res:Response)=>{
     try{ 
         
         const idRol = req.user?.id_rol
+        const idColegio = req.user?.id_colegio
         const { user, admin } = req.query;  
 
         const alta = await resetarPass(
@@ -108,22 +87,13 @@ const ResetarPass = async (req:RequestExt,res:Response)=>{
             transaction,
             user as string | undefined,
             admin as string | undefined)
-        
-        const idColegio = req.user?.id_colegio
-        const idUsuario = req.user?.id
-        const data = {"data":alta,"mensaje":"Contraseña restablecida"}
-        await registrarEvento(
-            idUsuario,
-            idRol,
-            idRol==0?0:1,
-            alta.id,
-            "Reiniciar",
-            data.mensaje,
-            requestIp.getClientIp(req) || 'No Disponible',
-            req.headers['user-agent'] || 'No Disponible',
-            transaction,
-            idColegio
-        );
+
+        const data = {
+            "data":alta,
+            "mensaje":"Contraseña restablecida",
+            "log":`/ ${user?'Usuario(id)':admin?'Administrador(id)':''}+${alta.id}`,
+            "idColegio":`${idColegio}`}
+
         await transaction.commit();
 
         res.status(200).send(data);
@@ -139,27 +109,16 @@ const Suspender = async (req:RequestExt,res:Response)=>{
     
     try{
         const idRol = req.user?.id_rol
+        const idColegio = req.user?.id_colegio
         const {id} = req.query   
         const usuario = await suspender(idRol, id as string,transaction)
         const data = {
             "data":usuario,
-            mensaje: "Usuario " + (usuario.suspendido == 1 ? "Suspendido" : "Activado")
+            mensaje: "Usuario " + (usuario.suspendido == 1 ? "Suspendido" : "Activado"),
+            "log":`/ Usuario(id):${usuario.id}`,
+            "idColegio":`${idColegio}`
         }
-        const idColegio = req.user?.id_colegio
-        const idUsuario = req.user?.id 
-        
-        await registrarEvento(
-            idUsuario,
-            idRol,
-            idRol==0?0:1,
-            usuario.id,
-            usuario.suspendido == 1?"Suspender":"Activar",
-            data.mensaje,
-            requestIp.getClientIp(req) || 'No Disponible',
-            req.headers['user-agent'] || 'No Disponible',
-            transaction,
-            idColegio
-        );
+
         await transaction.commit()
 
         res.status(200).send(data)       
@@ -173,26 +132,15 @@ const Borrar = async (req:RequestExt,res:Response)=>{
     const transaction = await sequelize.transaction()
     try{
         const idRol = req.user?.id_rol
+        const idColegio = req.user?.id_colegio
         const {id} = req.query   
         const usuario = await borrar(idRol, id as string,transaction)
         const data = {
             "data":usuario,
-            mensaje: "Usuario Eliminado"
-        }
-        const idColegio = req.user?.id_colegio
-        const idUsuario = req.user?.id 
-        await registrarEvento(
-            idUsuario,
-            idRol,
-            idRol==0?0:1,
-            usuario.id,
-            "Borrar",
-            data.mensaje,
-            requestIp.getClientIp(req) || 'No Disponible',
-            req.headers['user-agent'] || 'No Disponible',
-            transaction,
-            idColegio
-        );
+            mensaje: "Usuario Eliminado",
+            "log":`/ Usuario(id):${usuario.id}`,
+            "idColegio":`${idColegio}`}
+        
         await transaction.commit()
 
         res.status(200).send(data)       
@@ -221,23 +169,9 @@ const Editar = async (req:RequestExt,res:Response)=>{
 
           
         const usuario = await editar(userConFoto.usuario,idUsuario,idRol, transaction, idColegio)
-        const data = {"data":usuario,mensaje: "Datos actualizado"}
+        const data = {"data":usuario,mensaje: "Datos actualizado","log":`/ Usuario(id):${usuario.id}`,
+        "idColegio":`${idColegio}`}
 
-        // const idColegio = req.user?.id_colegio
-        // const idUsuario = req.user?.id 
-        
-        // await registrarEvento(
-        //     idUsuario,
-        //     idRol,
-        //     idRol==0?0:1,
-        //     usuario.id,
-        //     usuario.suspendido == 1?"Suspender":"Activar",
-        //     data.mensaje,
-        //     requestIp.getClientIp(req) || 'No Disponible',
-        //     req.headers['user-agent'] || 'No Disponible',
-        //     transaction,
-        //     idColegio
-        // );
         await transaction.commit()
 
         res.status(200).send(data)       

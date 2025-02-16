@@ -7,8 +7,6 @@ exports.AltaDelegado = exports.ObtenerDelegados = void 0;
 const error_handle_1 = require("../utils/error.handle");
 const delegado_service_1 = require("../services/delegado.service");
 const database_1 = __importDefault(require("../config/database"));
-const registro_service_1 = require("../services/registro.service");
-const request_ip_1 = __importDefault(require("request-ip"));
 const ObtenerDelegados = async (req, res) => {
     try {
         const id_colegio = req.user?.id_colegio;
@@ -27,10 +25,10 @@ const AltaDelegado = async (req, res) => {
     try {
         const idColegio = req.user?.id_colegio;
         const alta = await (0, delegado_service_1.altaDelegado)(idColegio, req.body, transaction);
-        const data = { "data": alta, "mensaje": "Delegado dado de alta" };
-        const idRol = req.user?.id_rol;
-        const idUsuario = req.user?.id;
-        await (0, registro_service_1.registrarEvento)(idUsuario, idRol, 1, alta.id, "Alta", data.mensaje, request_ip_1.default.getClientIp(req) || 'No Disponible', req.headers['user-agent'] || 'No Disponible', transaction, idColegio);
+        const data = { "data": alta,
+            "mensaje": "Delegado dado de alta",
+            "log": `/ Delegado(id):${alta.id}`,
+            "idColegio": `${idColegio}` };
         await transaction.commit();
         res.status(200).send(data);
     }

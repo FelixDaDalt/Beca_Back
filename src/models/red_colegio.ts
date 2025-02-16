@@ -35,7 +35,7 @@ export class red_colegio extends Model<red_colegioAttributes, red_colegioCreatio
   bsp!: number;
   bsa!: number;
   bde!: number;
-  borrado!: number;
+  borrado?: number;
 
   // red_colegio belongsTo colegio via id_colegio
   id_colegio_colegio!: colegio;
@@ -75,42 +75,42 @@ export class red_colegio extends Model<red_colegioAttributes, red_colegioCreatio
     },
     bp: {
       type: DataTypes.INTEGER,
-      allowNull: true,
+      allowNull: false,
       defaultValue: 0
     },
     btp: {
       type: DataTypes.INTEGER,
-      allowNull: true,
+      allowNull: false,
       defaultValue: 0
     },
     db: {
       type: DataTypes.INTEGER,
-      allowNull: true,
+      allowNull: false,
       defaultValue: 0
     },
     dbu: {
       type: DataTypes.INTEGER,
-      allowNull: true,
+      allowNull: false,
       defaultValue: 0
     },
     dbd: {
       type: DataTypes.INTEGER,
-      allowNull: true,
+      allowNull: false,
       defaultValue: 0
     },
     bsp: {
       type: DataTypes.INTEGER,
-      allowNull: true,
+      allowNull: false,
       defaultValue: 0
     },
     bsa: {
       type: DataTypes.INTEGER,
-      allowNull: true,
+      allowNull: false,
       defaultValue: 0
     },
     bde: {
       type: DataTypes.INTEGER,
-      allowNull: true,
+      allowNull: false,
       defaultValue: 0
     },
     borrado: {

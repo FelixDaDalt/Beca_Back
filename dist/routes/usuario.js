@@ -21,4 +21,4 @@ router.put('/borrar', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([0
 router.put('/editar', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([0, 1, 2, 3]), avatar_upload_1.default.single('foto'), usuario_controller_1.Editar);
 router.get('/me', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([1, 2, 3]), usuario_controller_1.Me);
 router.put('/suspender', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([0, 1, 2]), usuario_controller_1.Suspender);
-router.get('/resetearPass', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([0, 1, 2]), usuario_controller_1.ResetarPass);
+router.put('/resetearPass', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([0, 1, 2]), usuario_controller_1.ResetarPass);

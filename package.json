@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node dist/index.js",
     "dev": "cross-env NODE_ENV=development nodemon src/index.ts",
-    "build": "tsc"
+    "update-models": "node updateModel.js",
+    "build": "cross-env NODE_ENV=production npx tsc"
   },
   "keywords": [],
   "author": "",
@@ -15,11 +16,12 @@
     "@types/quill": "^1.3.6",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
+    "dotenv": "^16.4.7",
     "express": "^4.21.1",
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
     "mysql2": "^3.11.3",
+    "node-cron": "^3.0.3",
     "nodemailer": "^6.10.0",
     "request-ip": "^3.3.0",
     "sequelize": "^6.37.4",
@@ -32,6 +34,7 @@
     "@types/jsonwebtoken": "^9.0.7",
     "@types/multer": "^1.4.12",
     "@types/node": "^22.7.7",
+    "@types/node-cron": "^3.0.11",
     "@types/nodemailer": "^6.4.17",
     "@types/request-ip": "^0.0.41",
     "cross-env": "^7.0.3",

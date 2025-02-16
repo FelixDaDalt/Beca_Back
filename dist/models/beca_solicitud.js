@@ -135,7 +135,30 @@ class beca_solicitud extends sequelize_1.Model {
             baja_comentario: {
                 type: sequelize_1.DataTypes.TEXT,
                 allowNull: true
-            }
+            },
+            sinLeer: {
+                type: sequelize_1.DataTypes.BOOLEAN,
+                allowNull: true,
+                defaultValue: 1
+            },
+            sinLeerSolicitante: {
+                type: sequelize_1.DataTypes.BOOLEAN,
+                allowNull: true,
+                defaultValue: 0
+            },
+            id_pariente: {
+                type: sequelize_1.DataTypes.INTEGER,
+                allowNull: false,
+                references: {
+                    model: 'usuario',
+                    key: 'id'
+                }
+            },
+            notificacionVencimiento: {
+                type: sequelize_1.DataTypes.BOOLEAN,
+                allowNull: true,
+                defaultValue: 0
+            },
         }, {
             sequelize,
             tableName: 'beca_solicitud',
@@ -196,6 +219,13 @@ class beca_solicitud extends sequelize_1.Model {
                     using: "BTREE",
                     fields: [
                         { name: "id_usuario_baja" },
+                    ]
+                },
+                {
+                    name: "fk_beca_solicitud_usuario_0",
+                    using: "BTREE",
+                    fields: [
+                        { name: "id_pariente" },
                     ]
                 },
             ]

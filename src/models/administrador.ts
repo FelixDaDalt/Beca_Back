@@ -1,7 +1,6 @@
 import * as Sequelize from 'sequelize';
 import { DataTypes, Model, Optional } from 'sequelize';
-import type { ingresos_administradores, ingresos_administradoresId } from './ingresos_administradores';
-import type { registroeventos, registroeventosId } from './registroeventos';
+import type { actividad_log, actividad_logId } from './actividad_log';
 import type { roles, rolesId } from './roles';
 
 export interface administradorAttributes {
@@ -40,30 +39,18 @@ export class administrador extends Model<administradorAttributes, administradorC
   foto?: string;
   email!: string;
 
-  // administrador hasMany ingresos_administradores via id_usuario
-  ingresos_administradores!: ingresos_administradores[];
-  getIngresos_administradores!: Sequelize.HasManyGetAssociationsMixin<ingresos_administradores>;
-  setIngresos_administradores!: Sequelize.HasManySetAssociationsMixin<ingresos_administradores, ingresos_administradoresId>;
-  addIngresos_administradore!: Sequelize.HasManyAddAssociationMixin<ingresos_administradores, ingresos_administradoresId>;
-  addIngresos_administradores!: Sequelize.HasManyAddAssociationsMixin<ingresos_administradores, ingresos_administradoresId>;
-  createIngresos_administradore!: Sequelize.HasManyCreateAssociationMixin<ingresos_administradores>;
-  removeIngresos_administradore!: Sequelize.HasManyRemoveAssociationMixin<ingresos_administradores, ingresos_administradoresId>;
-  removeIngresos_administradores!: Sequelize.HasManyRemoveAssociationsMixin<ingresos_administradores, ingresos_administradoresId>;
-  hasIngresos_administradore!: Sequelize.HasManyHasAssociationMixin<ingresos_administradores, ingresos_administradoresId>;
-  hasIngresos_administradores!: Sequelize.HasManyHasAssociationsMixin<ingresos_administradores, ingresos_administradoresId>;
-  countIngresos_administradores!: Sequelize.HasManyCountAssociationsMixin;
-  // administrador hasMany registroeventos via administrador_id
-  registroeventos!: registroeventos[];
-  getRegistroeventos!: Sequelize.HasManyGetAssociationsMixin<registroeventos>;
-  setRegistroeventos!: Sequelize.HasManySetAssociationsMixin<registroeventos, registroeventosId>;
-  addRegistroevento!: Sequelize.HasManyAddAssociationMixin<registroeventos, registroeventosId>;
-  addRegistroeventos!: Sequelize.HasManyAddAssociationsMixin<registroeventos, registroeventosId>;
-  createRegistroevento!: Sequelize.HasManyCreateAssociationMixin<registroeventos>;
-  removeRegistroevento!: Sequelize.HasManyRemoveAssociationMixin<registroeventos, registroeventosId>;
-  removeRegistroeventos!: Sequelize.HasManyRemoveAssociationsMixin<registroeventos, registroeventosId>;
-  hasRegistroevento!: Sequelize.HasManyHasAssociationMixin<registroeventos, registroeventosId>;
-  hasRegistroeventos!: Sequelize.HasManyHasAssociationsMixin<registroeventos, registroeventosId>;
-  countRegistroeventos!: Sequelize.HasManyCountAssociationsMixin;
+  // administrador hasMany actividad_log via admin_id
+  actividad_logs!: actividad_log[];
+  getActividad_logs!: Sequelize.HasManyGetAssociationsMixin<actividad_log>;
+  setActividad_logs!: Sequelize.HasManySetAssociationsMixin<actividad_log, actividad_logId>;
+  addActividad_log!: Sequelize.HasManyAddAssociationMixin<actividad_log, actividad_logId>;
+  addActividad_logs!: Sequelize.HasManyAddAssociationsMixin<actividad_log, actividad_logId>;
+  createActividad_log!: Sequelize.HasManyCreateAssociationMixin<actividad_log>;
+  removeActividad_log!: Sequelize.HasManyRemoveAssociationMixin<actividad_log, actividad_logId>;
+  removeActividad_logs!: Sequelize.HasManyRemoveAssociationsMixin<actividad_log, actividad_logId>;
+  hasActividad_log!: Sequelize.HasManyHasAssociationMixin<actividad_log, actividad_logId>;
+  hasActividad_logs!: Sequelize.HasManyHasAssociationsMixin<actividad_log, actividad_logId>;
+  countActividad_logs!: Sequelize.HasManyCountAssociationsMixin;
   // administrador belongsTo roles via id_rol
   id_rol_role!: roles;
   getId_rol_role!: Sequelize.BelongsToGetAssociationMixin<roles>;

@@ -6,9 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AltaAutorizado = exports.ObtenerAutorizados = void 0;
 const error_handle_1 = require("../utils/error.handle");
 const database_1 = __importDefault(require("../config/database"));
-const request_ip_1 = __importDefault(require("request-ip"));
 const autorizados_service_1 = require("../services/autorizados.service");
-const registro_service_1 = require("../services/registro.service");
 const ObtenerAutorizados = async (req, res) => {
     try {
         const id_colegio = req.user?.id_colegio;
@@ -27,10 +25,10 @@ const AltaAutorizado = async (req, res) => {
     try {
         const idColegio = req.user?.id_colegio;
         const alta = await (0, autorizados_service_1.altaAutorizado)(idColegio, req.body, transaction);
-        const data = { "data": alta, "mensaje": "Autorizado dado de alta" };
-        const idUsuario = req.user?.id;
-        const idRol = req.user?.id_rol;
-        await (0, registro_service_1.registrarEvento)(idUsuario, idRol, 1, alta.id, "Alta", data.mensaje, request_ip_1.default.getClientIp(req) || 'No Disponible', req.headers['user-agent'] || 'No Disponible', transaction, idColegio);
+        const data = { "data": alta,
+            "mensaje": "Autorizado dado de alta",
+            "log": `/ Autorizado(id):${alta.id}`,
+            "idColegio": idColegio };
         await transaction.commit();
         res.status(200).send(data);
     }

@@ -7,8 +7,6 @@ exports.EditarColegio = exports.BorrarColegio = exports.DetalleColegio = exports
 const error_handle_1 = require("../utils/error.handle");
 const colegio_service_1 = require("../services/colegio.service");
 const database_1 = __importDefault(require("../config/database"));
-const registro_service_1 = require("../services/registro.service");
-const request_ip_1 = __importDefault(require("request-ip"));
 const ObtenerColegio = async (req, res) => {
     try {
         const idColegio = req.user?.id_colegio;
@@ -36,17 +34,10 @@ const AltaColegio = async (req, res) => {
             }
         };
         const alta = await (0, colegio_service_1.altaColegio)(colegioConFoto, transaction);
-        const data = { "data": alta, "mensaje": "Colegio dado de Alta" };
-        const idUsuario = req.user?.id;
-        const idRol = req.user?.id_rol;
-        // Registrar evento para el alta del colegio
-        await (0, registro_service_1.registrarEvento)(idUsuario, idRol, 2, alta.colegio.responseColegio.id, "Alta", data.mensaje, request_ip_1.default.getClientIp(req) || '', req.headers['user-agent'] || '', transaction, alta.colegio.responseColegio.id);
-        const responsableRegistro = `Responsable dado de alta`;
-        await (0, registro_service_1.registrarEvento)(idUsuario, idRol, 1, // Puedes cambiar el ID de la entidad tipo si es necesario
-        alta.responsable.responseUsuario.id, // El ID del administrador (responsable)
-        "Alta", // La acción realizada
-        responsableRegistro, // Descripción de la acción
-        request_ip_1.default.getClientIp(req) || '', req.headers['user-agent'] || '', transaction, alta.colegio.responseColegio.id);
+        const data = { "data": alta,
+            "mensaje": "Colegio dado de Alta",
+            "log": `/ Colegio(id):${alta.colegio.responseColegio.id} - Responsable(id):${alta.responsable.responseUsuario.id}`,
+            "idColegio": `${alta.colegio.responseColegio.id}` };
         await transaction.commit();
         res.status(200).send(data);
     }
@@ -65,37 +56,11 @@ const EditarColegio = async (req, res) => {
             ...body.colegio,
             foto: fotoUrl,
         };
-        console.log(colegioConFoto);
         const alta = await (0, colegio_service_1.editarColegio)(colegioConFoto, transaction);
-        const data = { "data": alta.editar, "mensaje": "Colegio Actualizado" };
-        const idUsuario = req.user?.id;
-        const idRol = req.user?.id_rol;
-        // // Registrar evento para el alta del colegio
-        // await registrarEvento(
-        //     idUsuario,
-        //     idRol,
-        //     2, 
-        //     alta.colegio.responseColegio.id, 
-        //     "Alta",  
-        //     data.mensaje, 
-        //     requestIp.getClientIp(req) || '',
-        //     req.headers['user-agent'] || '',
-        //     transaction,
-        //     alta.colegio.responseColegio.id
-        // );
-        // const responsableRegistro = `Responsable dado de alta`;
-        // await registrarEvento(
-        //     idUsuario,
-        //     idRol,
-        //     1, // Puedes cambiar el ID de la entidad tipo si es necesario
-        //     alta.responsable.responseUsuario.id,  // El ID del administrador (responsable)
-        //     "Alta",  // La acción realizada
-        //     responsableRegistro,  // Descripción de la acción
-        //     requestIp.getClientIp(req) || '',
-        //     req.headers['user-agent'] || '',
-        //     transaction,
-        //     alta.colegio.responseColegio.id
-        // );
+        const data = { "data": alta.editar,
+            "mensaje": "Colegio Actualizado",
+            "log": `/ Anterior:${alta.estadoAnterior} - Actual:${alta.editar}`,
+            "idColegio": `${alta.editar.id}` };
         await transaction.commit();
         res.status(200).send(data);
     }
@@ -123,11 +88,10 @@ const SuspenderColegio = async (req, res) => {
         const colegio = await (0, colegio_service_1.suspenderColegio)(idColegio, transaction);
         const data = {
             "data": colegio,
-            mensaje: "Colegio " + (colegio.suspendido == 1 ? "Suspendido" : "Activado")
+            mensaje: "Colegio " + (colegio.suspendido == 1 ? "Suspendido" : "Activado"),
+            "log": `/ Colegio(id):${colegio.id} `,
+            "idColegio": `${colegio.id}`
         };
-        const idUsuario = req.user?.id;
-        const idRol = req.user?.id_rol;
-        await (0, registro_service_1.registrarEvento)(idUsuario, idRol, 2, colegio.id, colegio.suspendido == 1 ? "Suspender" : "Activar", data.mensaje, request_ip_1.default.getClientIp(req) || 'No Disponible', req.headers['user-agent'] || 'No Disponible', transaction, colegio.id);
         await transaction.commit();
         res.status(200).send(data);
     }
@@ -156,20 +120,15 @@ exports.DetalleColegio = DetalleColegio;
 const BorrarColegio = async (req, res) => {
     const transaction = await database_1.default.transaction();
     try {
+        const idUsuario = req.user?.id;
         const { idColegio } = req.query;
-        const colegio = await (0, colegio_service_1.borrarColegio)(idColegio, transaction);
+        const colegio = await (0, colegio_service_1.borrarColegio)(idColegio, idUsuario, transaction);
         const data = {
             "data": colegio,
-            mensaje: "Colegio Eliminado"
+            mensaje: "Colegio Eliminado",
+            "log": `/ Colegio(id):${colegio.id}`,
+            "idColegio": `${colegio.id}`
         };
-        const idUsuario = req.user?.id;
-        const idRol = req.user?.id_rol;
-        await (0, registro_service_1.registrarEvento)(idUsuario, idRol, 2, colegio.id, "Borrar", data.mensaje, request_ip_1.default.getClientIp(req) || 'No Disponible', req.headers['user-agent'] || 'No Disponible', transaction, colegio.id);
-        const descripcion = `Usuario eliminado por: ${data.mensaje}, (ID: ${colegio.id})`;
-        const registrosUsuarios = colegio.usuarios.map((usuario) => {
-            return (0, registro_service_1.registrarEvento)(idUsuario, idRol, 1, usuario.id, 'Borrar', descripcion, request_ip_1.default.getClientIp(req) || '', req.headers['user-agent'] || '', transaction, colegio.id);
-        });
-        await Promise.all(registrosUsuarios);
         await transaction.commit();
         res.status(200).send(data);
     }

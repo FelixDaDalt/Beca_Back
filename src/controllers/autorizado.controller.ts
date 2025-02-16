@@ -4,7 +4,7 @@ import { RequestExt } from "../middleware/session"
 import sequelize from "../config/database"
 import requestIp from 'request-ip';
 import { altaAutorizado, listadoAutorizados } from "../services/autorizados.service"
-import { registrarEvento } from "../services/registro.service";
+
 
 
 const ObtenerAutorizados = async (req:RequestExt,res:Response)=>{
@@ -24,24 +24,11 @@ const AltaAutorizado = async (req:RequestExt,res:Response)=>{
     try{ 
         const idColegio = req.user?.id_colegio     
         const alta = await altaAutorizado(idColegio,req.body,transaction)
-        const data = {"data":alta,"mensaje":"Autorizado dado de alta"}
-
-        const idUsuario = req.user?.id 
-        const idRol = req.user?.id_rol
-        
-        await registrarEvento(
-            idUsuario,
-            idRol,
-            1,
-            alta.id,
-            "Alta",
-            data.mensaje,
-            requestIp.getClientIp(req) || 'No Disponible',
-            req.headers['user-agent'] || 'No Disponible',
-            transaction,
-            idColegio
-        );
-        
+        const data = {"data":alta,
+            "mensaje":"Autorizado dado de alta",
+            "log":`/ Autorizado(id):${alta.id}`,
+            "idColegio":idColegio}
+                
         await transaction.commit()
 
         res.status(200).send(data);

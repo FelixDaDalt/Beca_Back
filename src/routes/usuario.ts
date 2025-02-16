@@ -19,6 +19,6 @@ router.put('/editar',comprobarJWT, verificarRoles([0,1,2,3]), uploadAvatar.singl
 router.get('/me',comprobarJWT, verificarRoles([1,2,3]),Me)
 
 router.put('/suspender',comprobarJWT, verificarRoles([0,1,2]), Suspender)
-router.get('/resetearPass',comprobarJWT,verificarRoles([0,1,2]), ResetarPass)
+router.put('/resetearPass',comprobarJWT,verificarRoles([0,1,2]), ResetarPass)
 
 export {router} //exportamos la rutas

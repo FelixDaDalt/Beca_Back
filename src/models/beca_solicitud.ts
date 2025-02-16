@@ -28,11 +28,12 @@ export interface beca_solicitudAttributes {
   sinLeer?: number;
   sinLeerSolicitante?: number;
   id_pariente: number;
+  notificacionVencimiento?: number;
 }
 
 export type beca_solicitudPk = "id";
 export type beca_solicitudId = beca_solicitud[beca_solicitudPk];
-export type beca_solicitudOptionalAttributes = "id" | "fecha_hora" | "detalle" | "id_resolucion" | "res_comentario" | "id_usuario_reso" | "reso_fecha_hora" | "id_estado" | "id_usuario_baja" | "baja_fecha_hora" | "baja_comentario" | "sinLeer" | "sinLeerSolicitante";
+export type beca_solicitudOptionalAttributes = "id" | "fecha_hora" | "detalle" | "id_resolucion" | "res_comentario" | "id_usuario_reso" | "reso_fecha_hora" | "id_estado" | "id_usuario_baja" | "baja_fecha_hora" | "baja_comentario" | "sinLeer" | "sinLeerSolicitante" | "notificacionVencimiento";
 export type beca_solicitudCreationAttributes = Optional<beca_solicitudAttributes, beca_solicitudOptionalAttributes>;
 
 export class beca_solicitud extends Model<beca_solicitudAttributes, beca_solicitudCreationAttributes> implements beca_solicitudAttributes {
@@ -57,6 +58,7 @@ export class beca_solicitud extends Model<beca_solicitudAttributes, beca_solicit
   sinLeer?: number;
   sinLeerSolicitante?: number;
   id_pariente!: number;
+  notificacionVencimiento?: number;
 
   // beca_solicitud belongsTo beca via id_beca
   id_beca_beca!: beca;
@@ -225,7 +227,12 @@ export class beca_solicitud extends Model<beca_solicitudAttributes, beca_solicit
         model: 'usuario',
         key: 'id'
       }
-    }
+    },
+    notificacionVencimiento: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+      defaultValue: 0
+    },
   }, {
     sequelize,
     tableName: 'beca_solicitud',

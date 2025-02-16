@@ -94,7 +94,8 @@ const altaColegio = async (altaColegio: nuevoColegio, transaction:Transaction) =
             ...altaColegio.usuario,
             password:passEncrypt,
             id_rol:1, 
-            id_colegio: nuevoColegio.id
+            id_colegio: nuevoColegio.id,
+            cambiarPass: 1
         }, { transaction });
 
         // 7. Retornar

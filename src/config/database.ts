@@ -16,6 +16,10 @@ const sequelize = new Sequelize({
   port: Number(process.env.DB_PORT!),
   dialect: 'mysql',
   logging: false,
+  timezone: '-03:00',
+  dialectOptions: {
+    timezone: 'Z',  // Opcional si usas UTC
+  },
 });
 
 initModels(sequelize)

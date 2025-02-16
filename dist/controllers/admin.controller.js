@@ -7,17 +7,12 @@ exports.Actualizar = exports.Me = exports.BorrarAdministrador = exports.ObtenerA
 const error_handle_1 = require("../utils/error.handle");
 const admin_service_1 = require("../services/admin.service");
 const database_1 = __importDefault(require("../config/database"));
-const registro_service_1 = require("../services/registro.service");
-const request_ip_1 = __importDefault(require("request-ip"));
 //ADMINISTRADORES
 const AltaAdministrador = async (req, res) => {
     const transaction = await database_1.default.transaction();
     try {
         const alta = await (0, admin_service_1.altaAdministrador)(req.body, transaction);
-        const data = { "data": alta, "mensaje": "Administrador dado de alta" };
-        const idUsuario = req.user?.id;
-        const idRol = req.user?.id_rol;
-        await (0, registro_service_1.registrarEvento)(idUsuario, idRol, 0, alta.id, 'Alta', data.mensaje, request_ip_1.default.getClientIp(req) || 'No Disponible', req.headers['user-agent'] || 'No Disponible', transaction);
+        const data = { "data": alta, "mensaje": "Administrador dado de alta", "log": `/ Administrador(id):${alta.id}` };
         await transaction.commit();
         res.status(200).send(data);
     }
@@ -42,15 +37,14 @@ exports.ObtenerAdministradores = ObtenerAdministradores;
 const SuspenderAdministrador = async (req, res) => {
     const transaction = await database_1.default.transaction();
     try {
-        const idUsuario = req.user?.id;
         const idRol = req.user?.id_rol;
         const { idAdmin } = req.query;
         const adminSuspendido = await (0, admin_service_1.suspenderAdministrador)(idRol, idAdmin, transaction);
         const data = {
             "data": adminSuspendido,
-            mensaje: "Administrador " + (adminSuspendido.suspendido == 1 ? "Suspendido " : "Activado ")
+            mensaje: "Administrador " + (adminSuspendido.suspendido == 1 ? "Suspendido " : "Activado "),
+            "log": `/ Administrador(id):${adminSuspendido.id}`
         };
-        await (0, registro_service_1.registrarEvento)(idUsuario, idRol, 0, adminSuspendido.id, adminSuspendido.suspendido == 1 ? "Suspender" : "Activar", data.mensaje, request_ip_1.default.getClientIp(req) || 'No Disponible', req.headers['user-agent'] || 'No Disponible', transaction);
         await transaction.commit();
         res.status(200).send(data);
     }
@@ -63,15 +57,14 @@ exports.SuspenderAdministrador = SuspenderAdministrador;
 const BorrarAdministrador = async (req, res) => {
     const transaction = await database_1.default.transaction();
     try {
-        const idUsuario = req.user?.id;
         const idRol = req.user?.id_rol;
         const { idAdmin } = req.query;
         const adminBorrado = await (0, admin_service_1.borrarAdministrador)(idRol, idAdmin, transaction);
         const data = {
             "data": adminBorrado,
-            mensaje: "Administrador Eliminado"
+            mensaje: "Administrador Eliminado",
+            "log": `/ Administrador(id):${adminBorrado.id}`
         };
-        await (0, registro_service_1.registrarEvento)(idUsuario, idRol, 0, adminBorrado.id, "Borrar", data.mensaje, request_ip_1.default.getClientIp(req) || 'No Disponible', req.headers['user-agent'] || 'No Disponible', transaction);
         await transaction.commit();
         res.status(200).send(data);
     }
@@ -106,21 +99,7 @@ const Actualizar = async (req, res) => {
             },
         };
         const usuario = await (0, admin_service_1.actualizar)(userConFoto.usuario, idUsuario, transaction);
-        const data = { "data": usuario, mensaje: "Datos actualizado" };
-        // const idColegio = req.user?.id_colegio
-        // const idUsuario = req.user?.id 
-        // await registrarEvento(
-        //     idUsuario,
-        //     idRol,
-        //     idRol==0?0:1,
-        //     usuario.id,
-        //     usuario.suspendido == 1?"Suspender":"Activar",
-        //     data.mensaje,
-        //     requestIp.getClientIp(req) || 'No Disponible',
-        //     req.headers['user-agent'] || 'No Disponible',
-        //     transaction,
-        //     idColegio
-        // );
+        const data = { "data": usuario, mensaje: "Datos actualizado", "log": `/ Administrador(id):${usuario.id}` };
         await transaction.commit();
         res.status(200).send(data);
     }
@@ -157,11 +136,12 @@ exports.Comprobar = Comprobar;
 const NuevoTyc = async (req, res) => {
     const transaction = await database_1.default.transaction();
     try {
-        const idUsuario = req.user?.id;
-        const idRol = req.user?.id_rol;
         const altaTyc = await (0, admin_service_1.nuevoTyc)(req.body, transaction);
-        const data = { "data": altaTyc, "mensaje": "Nuevos Terminos y Condiciones creado" };
-        await (0, registro_service_1.registrarEvento)(idUsuario, idRol, 6, altaTyc.id, "Alta", data.mensaje, request_ip_1.default.getClientIp(req) || 'No Disponible', req.headers['user-agent'] || 'No Disponible', transaction);
+        const data = {
+            "data": altaTyc,
+            "mensaje": "Nuevos Terminos y Condiciones creado",
+            "log": `/ Tyc(id):${altaTyc.id}`,
+        };
         await transaction.commit();
         res.status(200).send(data);
     }

@@ -38,11 +38,14 @@ const altaResponsable = async (nuevoResponsable, transaction) => {
     }
 };
 exports.altaResponsable = altaResponsable;
-const listadoResponsables = async (idConsulta, idColegio) => {
+const listadoResponsables = async (idConsulta, idRol, idColegio) => {
     try {
-        const whereCondicion = idColegio
-            ? { id_colegio: idColegio, id_rol: 1, borrado: 0, id: { [sequelize_1.Op.ne]: idConsulta } }
-            : { id_rol: 1, borrado: 0, id: { [sequelize_1.Op.ne]: idConsulta } };
+        const whereCondicion = {
+            id_rol: 1,
+            borrado: 0,
+            ...(idColegio && { id_colegio: idColegio }),
+            ...(idRol > 0 && { id: { [sequelize_1.Op.ne]: idConsulta } }) // Solo aplica si idRol > 0
+        };
         const listado = await usuario_1.usuario.findAll({
             where: whereCondicion,
             attributes: { exclude: ['borrado', 'password', 'id_colegio'] },

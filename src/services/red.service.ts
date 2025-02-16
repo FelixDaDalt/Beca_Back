@@ -74,7 +74,10 @@ const altaRed = async (altaRed: nuevaRed, transaction:Transaction) => {
 };
 
 const listadoRedes = async (idColegio?: string) => {
-    try {
+    try { 
+        
+        const whereCondition = idColegio ? { id_colegio: idColegio,borrado:0 } : {borrado:0}; // Solo agregar si existe idColegio
+
         const listado = await red.findAll({
             where: { borrado: 0 },
             attributes: { exclude: ['borrado'] },
@@ -82,7 +85,8 @@ const listadoRedes = async (idColegio?: string) => {
                 {
                     model: red_colegio,
                     as: 'red_colegios',
-                    required: false,
+                    required: !!idColegio,
+                    where:whereCondition,
                     attributes: ['id_colegio', 'id_red', 'anfitrion'],
                     include: [
                         {
@@ -270,14 +274,16 @@ const colegiosDisponibles = async (idRed: string) => {
         // Extraer miembros y convertir logos a Base64
         const miembros = redEncontrada.red_colegios.map((redColegio: any) => {
             const colegio = redColegio.id_colegio_colegio;
-        
 
-        
-            return colegio;
-        });;
+            const colegioPlano = colegio ? colegio.toJSON() : {};
+            if (redColegio.anfitrion) {
+                colegioPlano.anfitrion = 1;
+            }
+            return colegioPlano;
+        });
 
         // Obtener IDs de colegios que ya están en la red
-        const idsMiembros = redEncontrada.red_colegios.map((colegio: any) => colegio.id);
+        const idsMiembros = redEncontrada.red_colegios.map((colegio: any) => colegio.id_colegio);
 
         // Obtener los colegios que NO están en la red
         const disponibles = await colegio.findAll({
@@ -288,8 +294,6 @@ const colegiosDisponibles = async (idRed: string) => {
                 borrado: 0, // Asegurarnos de no incluir colegios "borrados"
             },
         });
-
-
 
 
         return {
@@ -506,8 +510,8 @@ const obtenerMiembros = async (idRed:string, rol:number) => {
                 required: false
             }],
             order: [
-                ['anfitrion', 'DESC'], // Ordena por anfitrion (1 primero)
-                [{ model: colegio, as: 'id_colegio_colegio' }, 'nombre', 'ASC'] // Luego ordena por nombre del colegio
+                ['anfitrion', 'DESC'], 
+                [{ model: colegio, as: 'id_colegio_colegio' }, 'nombre', 'ASC'] 
             ]
         });
 

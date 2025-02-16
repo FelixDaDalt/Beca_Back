@@ -238,7 +238,7 @@ const solicitarBeca = async (solicitud: Solicitud, idRed: string, idUsuario: str
         // Crear las solicitudes para cada alumno
         const solicitudes = solicitud.alumnos.map(alumno => ({
             id_beca: solicitud.id_beca,
-            id_resolucion: 0, // EN REVISION
+            id_resolucion: 0,
             id_colegio_solic: Number(idColegio),
             id_usuario_solic: Number(idUsuario),
             alumno_nombre: alumno.nombre,
@@ -428,7 +428,7 @@ const solicitudDetalle = async (idSolicitud:string, idRed: string, idColegio:str
                 resolucion:{
                     id:solicitud?.id_resolucion,
                     nombre:solicitud?.id_resolucion_beca_resolucion.nombre,
-                    conResolucion: solicitud?.id_resolucion > 0,
+                    conResolucion: solicitud?.id_resolucion > 0 && solicitud.id_estado != 4,
                     detalle:{
                         usuario:solicitud?.id_usuario_reso_usuario,
                         fecha:solicitud?.reso_fecha_hora,
@@ -453,7 +453,7 @@ const solicitudDetalle = async (idSolicitud:string, idRed: string, idColegio:str
                     usuario:solicitud.id_usuario_baja_usuario,
                     fecha:solicitud.baja_fecha_hora,
                     comentario:solicitud.baja_comentario
-                } })
+                }})
             };       
 
         return procesado;
@@ -659,7 +659,7 @@ const miSolicitudDetalle = async (
             resolucion: {
                 id: solicitud?.id_resolucion,
                 nombre: solicitud?.id_resolucion_beca_resolucion.nombre,
-                conResolucion: solicitud?.id_resolucion > 0,
+                conResolucion: solicitud?.id_resolucion > 0 && solicitud.id_estado != 4,
                 detalle:{
                         usuario:solicitud?.id_usuario_reso_usuario,
                         fecha:solicitud?.reso_fecha_hora,
