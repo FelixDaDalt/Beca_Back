@@ -60,7 +60,8 @@ const notificaciones = async (idUsuario: string, idRol: number, idColegio: strin
         });
 
         const solicitudesMapeadas = solicitudes.map(s => ({
-            vencida:s.id_estado == 4,
+            vencida:s.notificarVencida,
+            porVencer:s.notificarPorVencer,
             desestimado:s.id_estado == 1,
             id: s.id,
             id_red:s.id_beca_beca?.id_red,
@@ -75,7 +76,8 @@ const notificaciones = async (idUsuario: string, idRol: number, idColegio: strin
             nombre: ms.id_beca_beca?.id_colegio_colegio?.nombre,
             reso_fecha_hora: ms.reso_fecha_hora,
             foto: ms.id_beca_beca?.id_colegio_colegio?.foto,
-            vencida:ms.id_estado == 4,
+            vencida:ms.notificarVencida,
+            porvencer:ms.notificarPorVencer
         }));
 
         const notificaciones = {
@@ -92,13 +94,5 @@ const notificaciones = async (idUsuario: string, idRol: number, idColegio: strin
         throw error;
     }
 };
-
-
-
-
-
-
-
-
 
 export{notificaciones }

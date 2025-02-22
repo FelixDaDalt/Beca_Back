@@ -5,6 +5,8 @@ import { administrador as _administrador } from "./administrador";
 import type { administradorAttributes, administradorCreationAttributes } from "./administrador";
 import { beca as _beca } from "./beca";
 import type { becaAttributes, becaCreationAttributes } from "./beca";
+import { beca_automatizacion_log as _beca_automatizacion_log } from "./beca_automatizacion_log";
+import type { beca_automatizacion_logAttributes, beca_automatizacion_logCreationAttributes } from "./beca_automatizacion_log";
 import { beca_estado as _beca_estado } from "./beca_estado";
 import type { beca_estadoAttributes, beca_estadoCreationAttributes } from "./beca_estado";
 import { beca_resolucion as _beca_resolucion } from "./beca_resolucion";
@@ -34,6 +36,7 @@ export {
   _actividad_log as actividad_log,
   _administrador as administrador,
   _beca as beca,
+  _beca_automatizacion_log as beca_automatizacion_log,
   _beca_estado as beca_estado,
   _beca_resolucion as beca_resolucion,
   _beca_solicitud as beca_solicitud,
@@ -55,6 +58,8 @@ export type {
   administradorCreationAttributes,
   becaAttributes,
   becaCreationAttributes,
+  beca_automatizacion_logAttributes,
+  beca_automatizacion_logCreationAttributes,
   beca_estadoAttributes,
   beca_estadoCreationAttributes,
   beca_resolucionAttributes,
@@ -85,6 +90,7 @@ export function initModels(sequelize: Sequelize) {
   const actividad_log = _actividad_log.initModel(sequelize);
   const administrador = _administrador.initModel(sequelize);
   const beca = _beca.initModel(sequelize);
+  const beca_automatizacion_log = _beca_automatizacion_log.initModel(sequelize);
   const beca_estado = _beca_estado.initModel(sequelize);
   const beca_resolucion = _beca_resolucion.initModel(sequelize);
   const beca_solicitud = _beca_solicitud.initModel(sequelize);
@@ -108,6 +114,8 @@ export function initModels(sequelize: Sequelize) {
   beca_estado.hasMany(beca_solicitud, { as: "beca_solicituds", foreignKey: "id_estado"});
   beca_solicitud.belongsTo(beca_resolucion, { as: "id_resolucion_beca_resolucion", foreignKey: "id_resolucion"});
   beca_resolucion.hasMany(beca_solicitud, { as: "beca_solicituds", foreignKey: "id_resolucion"});
+  beca_automatizacion_log.belongsTo(beca_solicitud, { as: "id_beca_solicitud_beca_solicitud", foreignKey: "id_beca_solicitud"});
+  beca_solicitud.hasMany(beca_automatizacion_log, { as: "beca_automatizacion_logs", foreignKey: "id_beca_solicitud"});
   beca.belongsTo(colegio, { as: "id_colegio_colegio", foreignKey: "id_colegio"});
   colegio.hasMany(beca, { as: "becas", foreignKey: "id_colegio"});
   beca_solicitud.belongsTo(colegio, { as: "id_colegio_solic_colegio", foreignKey: "id_colegio_solic"});
@@ -145,6 +153,7 @@ export function initModels(sequelize: Sequelize) {
     actividad_log: actividad_log,
     administrador: administrador,
     beca: beca,
+    beca_automatizacion_log: beca_automatizacion_log,
     beca_estado: beca_estado,
     beca_resolucion: beca_resolucion,
     beca_solicitud: beca_solicitud,

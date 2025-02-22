@@ -863,37 +863,33 @@ const darBajaSolicitud = async (
     transaction: Transaction
 ) => {
     try {
-
-        // Agregar filtro por usuario si el idRol es mayor a 2
         if (parseInt(idRol) > 2) {
             const error = new Error('No puede dar de baja una Beca');
             (error as any).statusCode = 400;
             throw error;
         }
 
-        // Verifica que la beca solicitada existe
         const solicitud = await beca_solicitud.findOne({
-            where: {
-                id: desestimar.id_solicitud
-            },
+            where: { id: desestimar.id_solicitud },
             include: [
-            {
-                model: beca,
-                as: 'id_beca_beca',
-                where: { id_red: idRed },
-                include:[
-                    {
-                        model:colegio,
-                        as:'id_colegio_colegio'
-                    }],
-                required: true,
-            },
-            {
-                model:colegio,
-                as:'id_colegio_solic_colegio'
-            }
-        ],
-        transaction,
+                {
+                    model: beca,
+                    as: 'id_beca_beca',
+                    where: { id_red: idRed },
+                    include: [
+                        {
+                            model: colegio,
+                            as: 'id_colegio_colegio'
+                        }
+                    ],
+                    required: true,
+                },
+                {
+                    model: colegio,
+                    as: 'id_colegio_solic_colegio'
+                }
+            ],
+            transaction,
         });
 
         if (!solicitud) {
@@ -902,42 +898,48 @@ const darBajaSolicitud = async (
             throw error;
         }
 
+        const fecha = new Date();
+        await solicitud.update(
+            {
+                id_estado: 3,
+                baja_fecha_hora: fecha,
+                id_usuario_baja: Number(idUsuario),
+                baja_comentario: desestimar.baja_comentario,
+                sinLeerSolicitante: 1
+            },
+            { transaction }
+        );
 
-            const fecha = new Date()
-            // Pendiente de baja
-            await solicitud.update(
-                {
-                    id_estado: 3,
-                    baja_fecha_hora: fecha,
-                    id_usuario_baja: Number(idUsuario),
-                    baja_comentario: desestimar.baja_comentario,
-                    sinLeerSolicitante:1
-                },
-                { transaction }
-            );
+        // Determinar quién solicita y quién debe ser informado
+        const colegioSolicitante = solicitud.id_colegio_solic_colegio;
+        const colegioOfertante = solicitud.id_beca_beca.id_colegio_colegio;
 
-            
+        const colegioQueSolicito =
+            Number(idColegio) === colegioSolicitante.id
+                ? colegioSolicitante
+                : colegioOfertante;
 
-            // const redColegioSolicitado = await obtenerRedColegio(solicitud.id_colegio_solic, idRed, transaction);
-            // const dbuTotal = redColegioSolicitado.dbu - 1;
-            // const dbdTotal = redColegioSolicitado.db - dbuTotal;
+        const colegioAInformar =
+            Number(idColegio) === colegioSolicitante.id
+                ? colegioOfertante
+                : colegioSolicitante;
 
-            // await redColegioSolicitado.update(
-            //     { dbu: dbuTotal, dbd: dbdTotal },
-            //     { transaction }
-            // );
-            
-            // const redColegio = await obtenerRedColegio(idColegio, idRed, transaction);
-            // await actualizarRedColegio(redColegio, -1, 0, transaction);
-
-        return {solicitud,
-                emailDestino:solicitud.id_colegio_solic_colegio.email,
-                colegio:solicitud.id_beca_beca.id_colegio_colegio.nombre
-                };
+        return {
+            solicitud,
+            colegioQueSolicito: {
+                nombre: colegioQueSolicito.nombre,
+                email: colegioQueSolicito.email,
+            },
+            colegioAInformar: {
+                nombre: colegioAInformar.nombre,
+                email: colegioAInformar.email,
+            }
+        };
     } catch (error) {
         throw error;
     }
 };
+
 
 
 

@@ -76,7 +76,7 @@ const altaRed = async (altaRed: nuevaRed, transaction:Transaction) => {
 const listadoRedes = async (idColegio?: string) => {
     try { 
         
-        const whereCondition = idColegio ? { id_colegio: idColegio,borrado:0 } : {borrado:0}; // Solo agregar si existe idColegio
+        // Solo agregar si existe idColegio
 
         const listado = await red.findAll({
             where: { borrado: 0 },
@@ -86,7 +86,7 @@ const listadoRedes = async (idColegio?: string) => {
                     model: red_colegio,
                     as: 'red_colegios',
                     required: !!idColegio,
-                    where:whereCondition,
+                    where:{borrado:0},
                     attributes: ['id_colegio', 'id_red', 'anfitrion'],
                     include: [
                         {
@@ -103,10 +103,11 @@ const listadoRedes = async (idColegio?: string) => {
             const { red_colegios, ...resto } = redItem.toJSON() as any;
         
             // Buscar el colegio anfitrión (siempre devolver el objeto `id_colegio_colegio` del registro con `anfitrion: true`)
-            const anfitrionColegio = red_colegios.find((rc: any) => rc.anfitrion === true)?.id_colegio_colegio || null;
+            const anfitrionColegio = red_colegios.find((rc: any) => rc.anfitrion == true)?.id_colegio_colegio || null;
+            
             // Verificar si el idColegio proporcionado es anfitrión
             const esAnfitrion = idColegio
-                ? red_colegios.some((rc: any) => rc.id_colegio === idColegio && rc.anfitrion === true)
+                ? red_colegios.some((rc: any) => rc.id_colegio == idColegio && rc.anfitrion === true)
                 : false;
         
             return {

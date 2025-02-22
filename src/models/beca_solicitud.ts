@@ -1,6 +1,7 @@
 import * as Sequelize from 'sequelize';
 import { DataTypes, Model, Optional } from 'sequelize';
 import type { beca, becaId } from './beca';
+import type { beca_automatizacion_log, beca_automatizacion_logId } from './beca_automatizacion_log';
 import type { beca_estado, beca_estadoId } from './beca_estado';
 import type { beca_resolucion, beca_resolucionId } from './beca_resolucion';
 import type { colegio, colegioId } from './colegio';
@@ -28,12 +29,13 @@ export interface beca_solicitudAttributes {
   sinLeer?: number;
   sinLeerSolicitante?: number;
   id_pariente: number;
-  notificacionVencimiento?: number;
+  notificarPorVencer?: number;
+  notificarVencida?:number;
 }
 
 export type beca_solicitudPk = "id";
 export type beca_solicitudId = beca_solicitud[beca_solicitudPk];
-export type beca_solicitudOptionalAttributes = "id" | "fecha_hora" | "detalle" | "id_resolucion" | "res_comentario" | "id_usuario_reso" | "reso_fecha_hora" | "id_estado" | "id_usuario_baja" | "baja_fecha_hora" | "baja_comentario" | "sinLeer" | "sinLeerSolicitante" | "notificacionVencimiento";
+export type beca_solicitudOptionalAttributes = "id" | "fecha_hora" | "detalle" | "id_resolucion" | "res_comentario" | "id_usuario_reso" | "reso_fecha_hora" | "id_estado" | "id_usuario_baja" | "baja_fecha_hora" | "baja_comentario" | "sinLeer" | "sinLeerSolicitante" | "notificarPorVencer" | "notificarVencida";
 export type beca_solicitudCreationAttributes = Optional<beca_solicitudAttributes, beca_solicitudOptionalAttributes>;
 
 export class beca_solicitud extends Model<beca_solicitudAttributes, beca_solicitudCreationAttributes> implements beca_solicitudAttributes {
@@ -58,7 +60,8 @@ export class beca_solicitud extends Model<beca_solicitudAttributes, beca_solicit
   sinLeer?: number;
   sinLeerSolicitante?: number;
   id_pariente!: number;
-  notificacionVencimiento?: number;
+  notificarPorVencer?: number;
+  notificarVencida?:number;
 
   // beca_solicitud belongsTo beca via id_beca
   id_beca_beca!: beca;
@@ -75,6 +78,18 @@ export class beca_solicitud extends Model<beca_solicitudAttributes, beca_solicit
   getId_resolucion_beca_resolucion!: Sequelize.BelongsToGetAssociationMixin<beca_resolucion>;
   setId_resolucion_beca_resolucion!: Sequelize.BelongsToSetAssociationMixin<beca_resolucion, beca_resolucionId>;
   createId_resolucion_beca_resolucion!: Sequelize.BelongsToCreateAssociationMixin<beca_resolucion>;
+  // beca_solicitud hasMany beca_automatizacion_log via id_beca_solicitud
+  beca_automatizacion_logs!: beca_automatizacion_log[];
+  getBeca_automatizacion_logs!: Sequelize.HasManyGetAssociationsMixin<beca_automatizacion_log>;
+  setBeca_automatizacion_logs!: Sequelize.HasManySetAssociationsMixin<beca_automatizacion_log, beca_automatizacion_logId>;
+  addBeca_automatizacion_log!: Sequelize.HasManyAddAssociationMixin<beca_automatizacion_log, beca_automatizacion_logId>;
+  addBeca_automatizacion_logs!: Sequelize.HasManyAddAssociationsMixin<beca_automatizacion_log, beca_automatizacion_logId>;
+  createBeca_automatizacion_log!: Sequelize.HasManyCreateAssociationMixin<beca_automatizacion_log>;
+  removeBeca_automatizacion_log!: Sequelize.HasManyRemoveAssociationMixin<beca_automatizacion_log, beca_automatizacion_logId>;
+  removeBeca_automatizacion_logs!: Sequelize.HasManyRemoveAssociationsMixin<beca_automatizacion_log, beca_automatizacion_logId>;
+  hasBeca_automatizacion_log!: Sequelize.HasManyHasAssociationMixin<beca_automatizacion_log, beca_automatizacion_logId>;
+  hasBeca_automatizacion_logs!: Sequelize.HasManyHasAssociationsMixin<beca_automatizacion_log, beca_automatizacion_logId>;
+  countBeca_automatizacion_logs!: Sequelize.HasManyCountAssociationsMixin;
   // beca_solicitud belongsTo colegio via id_colegio_solic
   id_colegio_solic_colegio!: colegio;
   getId_colegio_solic_colegio!: Sequelize.BelongsToGetAssociationMixin<colegio>;
@@ -228,11 +243,16 @@ export class beca_solicitud extends Model<beca_solicitudAttributes, beca_solicit
         key: 'id'
       }
     },
-    notificacionVencimiento: {
+    notificarPorVencer: {
       type: DataTypes.BOOLEAN,
       allowNull: true,
       defaultValue: 0
     },
+    notificarVencida: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+      defaultValue: 0
+    }
   }, {
     sequelize,
     tableName: 'beca_solicitud',

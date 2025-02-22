@@ -1,8 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { RequestExt } from './session';
 import { actividad_log } from '../models/actividad_log';
+import sequelize from '../config/database';
 
 const registrarActividad = async (req: RequestExt, res: Response, body: any) => {
+    const transaction = await sequelize.transaction();
     try {
         const { method, originalUrl } = req;
         const idUsuario = req.user?.id;
@@ -45,9 +47,11 @@ const registrarActividad = async (req: RequestExt, res: Response, body: any) => 
                 query_params: queryParams,
                 id_colegio,
                 id_rol
-            });
+            },{ transaction } );
+            await transaction.commit();
         }
     } catch (error) {
+        await transaction.rollback();
         console.error('Error registrando actividad:', error);
     }
 };
