@@ -11,6 +11,7 @@ import { beca_estado } from "../models/beca_estado";
 import { zona_localidad } from "../models/zona_localidad";
 import { zona } from "../models/zona";
 import { BecaService } from "./matrices.service";
+import { notificaciones } from "../models/notificaciones";
 
 
 
@@ -255,6 +256,16 @@ const solicitarBeca = async (solicitud: Solicitud, idRed: string, idUsuario: str
         // Usa BecaService para actualizar las matrices
         await BecaService.solicitarBeca(Number(idColegio), becaSolicitada.id_colegio, solicitudes.length, Number(idRed), transaction);
 
+        // Crear notificaciones en una sola operación con bulkCreate
+        const notificacionesData = solicitudesCreadas.map(sol => ({
+            id_solicitud: sol.id,
+            id_colegio_ofer: becaSolicitada.id_colegio, // Asegurar que la relación es válida
+            id_colegio_solic: sol.id_colegio_solic,
+            leido_solic:1
+        }));
+
+        await notificaciones.bulkCreate(notificacionesData, { transaction });
+        
         return { 
             solicitudesCreadas, 
             emailDestino: becaSolicitada.id_colegio_colegio.email, 
@@ -401,6 +412,11 @@ const solicitudDetalle = async (idSolicitud:string, idRed: string, idColegio:str
                 as:'id_usuario_baja_usuario',
                 attributes:['nombre','apellido','telefono','celular','email','foto'],
                 required:false
+            },
+            {
+                model:notificaciones,
+                as:'notificaciones',
+                required:false
             }],
             transaction // Asegúrate de pasar la transacción
         });
@@ -411,10 +427,14 @@ const solicitudDetalle = async (idSolicitud:string, idRed: string, idColegio:str
             throw error;
         }
 
-        if(solicitud.sinLeer==1 && idRol!=0){
-           solicitud.sinLeer = 0
-           await solicitud.save({transaction})
-        }
+        if (solicitud.notificaciones && solicitud.notificaciones.length > 0 && idRol !== 0) {
+            const ids = solicitud.notificaciones.map(n => n.id); 
+          
+            await notificaciones.update(
+              { leido_ofer: 1 },
+              { where: { id: ids } }
+            );
+          }
 
         const procesado = {
                 id:solicitud?.id,
@@ -631,6 +651,11 @@ const miSolicitudDetalle = async (
                     as:'id_pariente_usuario',
                     attributes: ['nombre', 'apellido'],
                     required:true
+                },
+                {
+                    model:notificaciones,
+                    as:'notificaciones',
+                    required:false
                 }
             ],
             transaction,
@@ -642,10 +667,14 @@ const miSolicitudDetalle = async (
             throw error;
         }
 
-        if(solicitud.sinLeerSolicitante == 1){
-            solicitud.sinLeerSolicitante = 0
-            await solicitud.save({transaction})
-        }
+        if (solicitud.notificaciones && solicitud.notificaciones.length > 0) {
+            const ids = solicitud.notificaciones.map(n => n.id); 
+          
+            await notificaciones.update(
+              { leido_solic: 1 },
+              { where: { id: ids } }
+            );
+          }
 
         const procesado = {
             id: solicitud?.id,
@@ -773,8 +802,21 @@ const resolverSolicitud = async (
             );
 
             await BecaService.rechazarBeca(solicitud.id_colegio_solic,idColegio,idRed,transaction)
-
         }
+
+        await notificaciones.update(
+            {
+                leido_solic:0,
+                resuelta:1,
+            },
+            {
+              where: {
+                id_solicitud: solicitud.id,
+              },
+              transaction
+            }
+          );
+
 
         return {solicitud,emailDestino:solicitud.id_colegio_solic_colegio.email,colegioSolicitud:solicitud.id_beca_beca.id_colegio_colegio.nombre};
     } catch (error) {
@@ -847,6 +889,19 @@ const desestimarSolicitud = async (
 
             await BecaService.desestimarBeca(idColegio,solicitud.id_beca_beca.id_colegio,idRed,transaction)
 
+            await notificaciones.update(
+                {
+                  leido_ofer: 0,
+                  desestimada: 1,
+                },
+                {
+                  where: {
+                    id_solicitud: solicitud.id,
+                  },
+                  transaction
+                }
+              );
+
             return {solicitud,emailDestino:solicitud.id_beca_beca.id_colegio_colegio.email,colegioSolicitante:solicitud.id_colegio_solic_colegio.nombre};
    
        } catch (error) {
@@ -909,6 +964,20 @@ const darBajaSolicitud = async (
             },
             { transaction }
         );
+
+        await notificaciones.update(
+            {
+                leido_solic:0,
+                porbaja:1,
+            },
+            {
+              where: {
+                id_solicitud: solicitud.id,
+              },
+              transaction
+            }
+          );
+
 
         // Determinar quién solicita y quién debe ser informado
         const colegioSolicitante = solicitud.id_colegio_solic_colegio;

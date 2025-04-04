@@ -130,11 +130,10 @@ const Me = async (req:RequestExt,res:Response)=>{
 //OTROS
 const Comprobar = async (req:RequestExt,res:Response)=>{
     try{ 
-        const { cuit, dni, url, dniAdmin } = req.query;    
+        const { cuit, dni, dniAdmin } = req.query;    
         const comprobacion = await comprobarDisponibilidad(
             cuit as string | undefined,
             dni as string | undefined,
-            url as string | undefined,
             dniAdmin as string | undefined)
         res.status(200).send(comprobacion);
     }catch(e){

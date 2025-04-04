@@ -2,7 +2,7 @@ import { Request, Response } from "express"
 import { handleHttp } from "../utils/error.handle"
 import { RequestExt } from "../middleware/session"
 import sequelize from "../config/database"
-import { notificaciones } from "../services/notificacion.service"
+import { obtenerNotificaciones } from "../services/notificacion.service"
 
 
 
@@ -13,9 +13,7 @@ const Notificaciones = async (req: RequestExt, res: Response) => {
         const idusuario = req.user?.id;
         const idrol = req.user?.id_rol;
         const idColegio = req.user?.id_colegio;
-
-
-        const notificacionesEncontradas = await notificaciones(idusuario,idrol,idColegio,transaction);
+        const notificacionesEncontradas = await obtenerNotificaciones(idusuario,idrol,idColegio,transaction);
         const data = { "data": notificacionesEncontradas , "mensaje": "Listado de Notificaciones" };
 
         await transaction.commit();

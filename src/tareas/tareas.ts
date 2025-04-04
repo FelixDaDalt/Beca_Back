@@ -7,6 +7,7 @@ import { colegio } from '../models/colegio';
 import { red_colegio } from '../models/red_colegio';
 import { enviarCorreo } from '../services/email.service';
 import { beca_automatizacion_log } from '../models/beca_automatizacion_log';
+import { notificaciones } from '../models/notificaciones';
 
 
 const diasVencimiento = 2;
@@ -80,11 +81,23 @@ async function notificarBecasVencidas() {
         console.log(`⏳ 3- Marcando becas como vencidas y notificar...`);
         // Marcar becas como vencidas
         await beca_solicitud.update(
-            { id_estado: 4, id_resolucion: 3, sinLeerSolicitante: 1, sinLeer: 1, notificarVencida:1 },
+            { id_estado: 4 },
             {
                 where: { id: becasVencidas.map((b) => b.id) },
                 transaction: t
             }
+        );
+
+        // NOTIFICAR
+        await notificaciones.update(
+          { vencida: 1,
+            leido_ofer:0,
+            leido_solic:0 
+          },
+          {
+              where: { id_solicitud: becasVencidas.map((b) => b.id) },
+              transaction: t
+          }
         );
         console.log("✅ Marcadas correctamente.");
 
@@ -136,41 +149,41 @@ async function notificarBecasVencidas() {
 
         await t.commit();
 
-        console.log("⏳ 6 - Procesando Correos.");
-        // Función para enviar correo con timeout
-        const enviar = (email:any, asunto:any, mensaje:any) => {
-            const timeout = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Timeout alcanzado para el envío de correo')), 15000) // 15 segundos de timeout
-            );
+        // console.log("⏳ 6 - Procesando Correos.");
+        // // Función para enviar correo con timeout
+        // const enviar = (email:any, asunto:any, mensaje:any) => {
+        //     const timeout = new Promise((_, reject) =>
+        //         setTimeout(() => reject(new Error('Timeout alcanzado para el envío de correo')), 15000) // 15 segundos de timeout
+        //     );
 
-            const enviar = enviarCorreo(
-                email,
-                asunto,
-                mensaje,
-                `<h1>${asunto}</h1><p>${mensaje}</p>`
-            );
+        //     const enviar = enviarCorreo(
+        //         email,
+        //         asunto,
+        //         mensaje,
+        //         `<h1>${asunto}</h1><p>${mensaje}</p>`
+        //     );
 
-            return Promise.race([enviar, timeout]); // Cualquiera de las dos promesas que se resuelva primero, la otra será rechazada
-        };
+        //     return Promise.race([enviar, timeout]); // Cualquiera de las dos promesas que se resuelva primero, la otra será rechazada
+        // };
 
-        // Enviar correos de notificación en paralelo
-        const correoPromises = becasVencidas.map(async (beca) => {
-            const colegioSolicitante = colegiosMap[beca.id_colegio_solic];
-            const colegioOfrecio = colegiosMap[beca.id_beca_beca.id_colegio];
+        // // Enviar correos de notificación en paralelo
+        // const correoPromises = becasVencidas.map(async (beca) => {
+        //     const colegioSolicitante = colegiosMap[beca.id_colegio_solic];
+        //     const colegioOfrecio = colegiosMap[beca.id_beca_beca.id_colegio];
 
-            try {
-                await Promise.all([
-                    enviar(colegioSolicitante?.email, "📌 Beca Vencida", `La beca que solicitaste ha vencido.`),
-                    enviar(colegioOfrecio?.email, "📌 Beca Vencida", `Una beca que te solicitaron ha vencido.`),
-                ]);
-            } catch (error) {
-                console.error(`⚠️ Error al enviar correo:`, error);
-            }
-        });
+        //     try {
+        //         await Promise.all([
+        //             enviar(colegioSolicitante?.email, "📌 Beca Vencida", `La beca que solicitaste ha vencido.`),
+        //             enviar(colegioOfrecio?.email, "📌 Beca Vencida", `Una beca que te solicitaron ha vencido.`),
+        //         ]);
+        //     } catch (error) {
+        //         console.error(`⚠️ Error al enviar correo:`, error);
+        //     }
+        // });
 
-        // Esperar a que todos los correos se envíen
-        await Promise.all(correoPromises);
-        console.log("📨 Correos enviados correctamente.");
+        // // Esperar a que todos los correos se envíen
+        // await Promise.all(correoPromises);
+        // console.log("📨 Correos enviados correctamente.");
   
         console.log("✅ Exit - Becas vencidas.");
     } catch (error) {
@@ -260,6 +273,17 @@ async function notificarBecasPorVencer() {
         transaction: t,
       }
     );
+
+    await notificaciones.update(
+      { porvencer: 1,
+        leido_ofer:0,
+        leido_solic:0 
+      },
+      {
+          where: { id_solicitud: becasPorVencer.map((b) => b.id) },
+          transaction: t
+      }
+    );
     console.log("✅ Marcadas correctamente");
 
     console.log(`⏳ 4 - Registrando Log`);
@@ -282,38 +306,38 @@ async function notificarBecasPorVencer() {
     console.log("✅ Log registrado.");
     await t.commit();
 
-    console.log(`⏳ 5 - Procesando Correos`);
-    const enviar = (email:any, asunto:any, mensaje:any) => {
-        const timeout = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Timeout alcanzado para el envío de correo')), 15000) // 15 segundos de timeout
-        );
+    // console.log(`⏳ 5 - Procesando Correos`);
+    // const enviar = (email:any, asunto:any, mensaje:any) => {
+    //     const timeout = new Promise((_, reject) =>
+    //         setTimeout(() => reject(new Error('Timeout alcanzado para el envío de correo')), 15000) // 15 segundos de timeout
+    //     );
 
-        const enviar = enviarCorreo(
-            email,
-            asunto,
-            mensaje,
-            `<h1>${asunto}</h1><p>${mensaje}</p>`
-        );
+    //     const enviar = enviarCorreo(
+    //         email,
+    //         asunto,
+    //         mensaje,
+    //         `<h1>${asunto}</h1><p>${mensaje}</p>`
+    //     );
 
-        return Promise.race([enviar, timeout]); // Cualquiera de las dos promesas que se resuelva primero, la otra será rechazada
-    };
-    // Enviar correos de notificación en paralelo
-    const correoPromises = becasPorVencer.map(async (beca) => {
-        const colegioSolicitante = colegiosMap[beca.id_colegio_solic];
-        const colegioOfrecio = colegiosMap[beca.id_beca_beca.id_colegio];
+    //     return Promise.race([enviar, timeout]); // Cualquiera de las dos promesas que se resuelva primero, la otra será rechazada
+    // };
+    // // Enviar correos de notificación en paralelo
+    // const correoPromises = becasPorVencer.map(async (beca) => {
+    //     const colegioSolicitante = colegiosMap[beca.id_colegio_solic];
+    //     const colegioOfrecio = colegiosMap[beca.id_beca_beca.id_colegio];
 
-        try {
-            await Promise.all([
-                enviar(colegioSolicitante?.email, "⏰ Beca por Vencer", `La beca solicitada a ${colegioOfrecio.nombre} está por vencer.`),
-                enviar(colegioOfrecio?.email, "⏰ Beca por Vencer", `Una beca solicitada por ${colegioSolicitante.nombre} está por vencer.`),
-            ]);
-        } catch (error) {
-            console.error(`⚠️ Error al enviar correo:`, error);
-        }
-    });
-    // Esperar a que todos los correos se envíen
-    await Promise.all(correoPromises);
-    console.log("📨 Correos enviados correctamente");
+    //     try {
+    //         await Promise.all([
+    //             enviar(colegioSolicitante?.email, "⏰ Beca por Vencer", `La beca solicitada a ${colegioOfrecio.nombre} está por vencer.`),
+    //             enviar(colegioOfrecio?.email, "⏰ Beca por Vencer", `Una beca solicitada por ${colegioSolicitante.nombre} está por vencer.`),
+    //         ]);
+    //     } catch (error) {
+    //         console.error(`⚠️ Error al enviar correo:`, error);
+    //     }
+    // });
+    // // Esperar a que todos los correos se envíen
+    // await Promise.all(correoPromises);
+    // console.log("📨 Correos enviados correctamente");
 
     console.log("✅ Exit - Becas por vencer.");
   } catch (error) {

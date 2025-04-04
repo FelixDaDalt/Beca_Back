@@ -74,69 +74,69 @@ const altaRed = async (altaRed: nuevaRed, transaction:Transaction) => {
 };
 
 const listadoRedes = async (idColegio?: string) => {
-    try { 
-        
-        // Solo agregar si existe idColegio
-
-        const listado = await red.findAll({
-            where: { borrado: 0 },
-            attributes: { exclude: ['borrado'] },
-            include: [
-                {
-                    model: red_colegio,
-                    as: 'red_colegios',
-                    required: !!idColegio,
-                    where:{borrado:0},
-                    attributes: ['id_colegio', 'id_red', 'anfitrion'],
-                    include: [
-                        {
-                            model: colegio,
-                            as: 'id_colegio_colegio',
-                            attributes: ['id', 'nombre', 'cuit']
-                        }
-                    ]
-                }
-            ]
-        });
-     
-        const redes = listado.map((redItem) => {
-            const { red_colegios, ...resto } = redItem.toJSON() as any;
-        
-            // Buscar el colegio anfitrión (siempre devolver el objeto `id_colegio_colegio` del registro con `anfitrion: true`)
-            const anfitrionColegio = red_colegios.find((rc: any) => rc.anfitrion == true)?.id_colegio_colegio || null;
-            
-            // Verificar si el idColegio proporcionado es anfitrión
-            const esAnfitrion = idColegio
-                ? red_colegios.some((rc: any) => rc.id_colegio == idColegio && rc.anfitrion === true)
-                : false;
-        
-            return {
-                ...resto,
-                Anfitrion: anfitrionColegio,
-                esAnfitrion,
-            };
-        });
-        
-
-        // Inicializar las categorías
-        let misRedes: any[] = [];
-        let vinculado: any[] = [];
-
-        if (idColegio) {
-            // Filtrar categorías solo si se pasa un idColegio
-            misRedes = redes.filter((red) => red.esAnfitrion);
-            vinculado = redes.filter((red) => !red.esAnfitrion);
-        }
-        
-        return {
-            redes,
-            misRedes,
-            vinculado
+    try {
+      const includeRedColegio: any = {
+        model: red_colegio,
+        as: 'red_colegios',
+        required: !!idColegio,
+        attributes: ['id_colegio', 'id_red', 'anfitrion'],
+        include: [
+          {
+            model: colegio,
+            as: 'id_colegio_colegio',
+            attributes: ['id', 'nombre', 'cuit']
+          }
+        ]
+      };
+  
+      if (idColegio) {
+        includeRedColegio.where = {
+          id_colegio: idColegio,
+          borrado: 0
         };
+      }
+  
+      const listado = await red.findAll({
+        where: { borrado: 0 },
+        attributes: { exclude: ['borrado'] },
+        include: [includeRedColegio]
+      });
+  
+      const redes = listado.map((redItem) => {
+        const { red_colegios, ...resto } = redItem.toJSON() as any;
+  
+        const anfitrionColegio = red_colegios?.find((rc: any) => rc.anfitrion)?.id_colegio_colegio || null;
+  
+        const esAnfitrion = idColegio
+          ? red_colegios?.some((rc: any) => rc.id_colegio == idColegio && rc.anfitrion === true)
+          : false;
+  
+        return {
+          ...resto,
+          Anfitrion: anfitrionColegio,
+          esAnfitrion,
+        };
+      });
+  
+      let misRedes: any[] = [];
+      let vinculado: any[] = [];
+  
+      if (idColegio) {
+        misRedes = redes.filter((red) => red.esAnfitrion);
+        vinculado = redes.filter((red) => !red.esAnfitrion);
+      }
+  
+      return {
+        redes,
+        misRedes,
+        vinculado
+      };
+  
     } catch (error) {
-        throw error;
+      throw error;
     }
-};
+  };
+  
 
 const borrarRed = async (idRed:string, transaction:Transaction) => {
         

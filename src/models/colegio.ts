@@ -2,6 +2,7 @@ import * as Sequelize from 'sequelize';
 import { DataTypes, Model, Optional } from 'sequelize';
 import type { beca, becaId } from './beca';
 import type { beca_solicitud, beca_solicitudId } from './beca_solicitud';
+import type { notificaciones, notificacionesId } from './notificaciones';
 import type { red, redId } from './red';
 import type { red_colegio, red_colegioId } from './red_colegio';
 import type { usuario, usuarioId } from './usuario';
@@ -18,9 +19,7 @@ export interface colegioAttributes {
   cp: string;
   id_zona: number;
   telefono: string;
-  url: string;
   email?: string;
-  terminos?: number;
   suspendido?: number;
   borrado?: number;
   foto?: string;
@@ -28,7 +27,7 @@ export interface colegioAttributes {
 
 export type colegioPk = "id";
 export type colegioId = colegio[colegioPk];
-export type colegioOptionalAttributes = "id" | "email" | "terminos" | "suspendido" | "borrado" | "foto";
+export type colegioOptionalAttributes = "id" | "email" | "suspendido" | "borrado" | "foto";
 export type colegioCreationAttributes = Optional<colegioAttributes, colegioOptionalAttributes>;
 
 export class colegio extends Model<colegioAttributes, colegioCreationAttributes> implements colegioAttributes {
@@ -42,9 +41,7 @@ export class colegio extends Model<colegioAttributes, colegioCreationAttributes>
   cp!: string;
   id_zona!: number;
   telefono!: string;
-  url!: string;
   email?: string;
-  terminos?: number;
   suspendido?: number;
   borrado?: number;
   foto?: string;
@@ -73,6 +70,30 @@ export class colegio extends Model<colegioAttributes, colegioCreationAttributes>
   hasBeca_solicitud!: Sequelize.HasManyHasAssociationMixin<beca_solicitud, beca_solicitudId>;
   hasBeca_solicituds!: Sequelize.HasManyHasAssociationsMixin<beca_solicitud, beca_solicitudId>;
   countBeca_solicituds!: Sequelize.HasManyCountAssociationsMixin;
+  // colegio hasMany notificaciones via id_colegio_ofer
+  notificaciones!: notificaciones[];
+  getNotificaciones!: Sequelize.HasManyGetAssociationsMixin<notificaciones>;
+  setNotificaciones!: Sequelize.HasManySetAssociationsMixin<notificaciones, notificacionesId>;
+  addNotificacione!: Sequelize.HasManyAddAssociationMixin<notificaciones, notificacionesId>;
+  addNotificaciones!: Sequelize.HasManyAddAssociationsMixin<notificaciones, notificacionesId>;
+  createNotificacione!: Sequelize.HasManyCreateAssociationMixin<notificaciones>;
+  removeNotificacione!: Sequelize.HasManyRemoveAssociationMixin<notificaciones, notificacionesId>;
+  removeNotificaciones!: Sequelize.HasManyRemoveAssociationsMixin<notificaciones, notificacionesId>;
+  hasNotificacione!: Sequelize.HasManyHasAssociationMixin<notificaciones, notificacionesId>;
+  hasNotificaciones!: Sequelize.HasManyHasAssociationsMixin<notificaciones, notificacionesId>;
+  countNotificaciones!: Sequelize.HasManyCountAssociationsMixin;
+  // colegio hasMany notificaciones via id_colegio_solic
+  id_colegio_solic_notificaciones!: notificaciones[];
+  getId_colegio_solic_notificaciones!: Sequelize.HasManyGetAssociationsMixin<notificaciones>;
+  setId_colegio_solic_notificaciones!: Sequelize.HasManySetAssociationsMixin<notificaciones, notificacionesId>;
+  addId_colegio_solic_notificacione!: Sequelize.HasManyAddAssociationMixin<notificaciones, notificacionesId>;
+  addId_colegio_solic_notificaciones!: Sequelize.HasManyAddAssociationsMixin<notificaciones, notificacionesId>;
+  createId_colegio_solic_notificacione!: Sequelize.HasManyCreateAssociationMixin<notificaciones>;
+  removeId_colegio_solic_notificacione!: Sequelize.HasManyRemoveAssociationMixin<notificaciones, notificacionesId>;
+  removeId_colegio_solic_notificaciones!: Sequelize.HasManyRemoveAssociationsMixin<notificaciones, notificacionesId>;
+  hasId_colegio_solic_notificacione!: Sequelize.HasManyHasAssociationMixin<notificaciones, notificacionesId>;
+  hasId_colegio_solic_notificaciones!: Sequelize.HasManyHasAssociationsMixin<notificaciones, notificacionesId>;
+  countId_colegio_solic_notificaciones!: Sequelize.HasManyCountAssociationsMixin;
   // colegio belongsToMany red via id_colegio and id_red
   id_red_reds!: red[];
   getId_red_reds!: Sequelize.BelongsToManyGetAssociationsMixin<red>;
@@ -163,19 +184,10 @@ export class colegio extends Model<colegioAttributes, colegioCreationAttributes>
       type: DataTypes.STRING(18),
       allowNull: false
     },
-    url: {
-      type: DataTypes.STRING(255),
-      allowNull: false
-    },
     email: {
       type: DataTypes.STRING(255),
       allowNull: true,
       defaultValue: "No Definido"
-    },
-    terminos: {
-      type: DataTypes.BOOLEAN,
-      allowNull: true,
-      defaultValue: 0
     },
     suspendido: {
       type: DataTypes.BOOLEAN,

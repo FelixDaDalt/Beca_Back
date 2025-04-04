@@ -17,6 +17,8 @@ import { colegio as _colegio } from "./colegio";
 import type { colegioAttributes, colegioCreationAttributes } from "./colegio";
 import { menu as _menu } from "./menu";
 import type { menuAttributes, menuCreationAttributes } from "./menu";
+import { notificaciones as _notificaciones } from "./notificaciones";
+import type { notificacionesAttributes, notificacionesCreationAttributes } from "./notificaciones";
 import { red as _red } from "./red";
 import type { redAttributes, redCreationAttributes } from "./red";
 import { red_colegio as _red_colegio } from "./red_colegio";
@@ -42,6 +44,7 @@ export {
   _beca_solicitud as beca_solicitud,
   _colegio as colegio,
   _menu as menu,
+  _notificaciones as notificaciones,
   _red as red,
   _red_colegio as red_colegio,
   _roles as roles,
@@ -70,6 +73,8 @@ export type {
   colegioCreationAttributes,
   menuAttributes,
   menuCreationAttributes,
+  notificacionesAttributes,
+  notificacionesCreationAttributes,
   redAttributes,
   redCreationAttributes,
   red_colegioAttributes,
@@ -96,6 +101,7 @@ export function initModels(sequelize: Sequelize) {
   const beca_solicitud = _beca_solicitud.initModel(sequelize);
   const colegio = _colegio.initModel(sequelize);
   const menu = _menu.initModel(sequelize);
+  const notificaciones = _notificaciones.initModel(sequelize);
   const red = _red.initModel(sequelize);
   const red_colegio = _red_colegio.initModel(sequelize);
   const roles = _roles.initModel(sequelize);
@@ -116,10 +122,16 @@ export function initModels(sequelize: Sequelize) {
   beca_resolucion.hasMany(beca_solicitud, { as: "beca_solicituds", foreignKey: "id_resolucion"});
   beca_automatizacion_log.belongsTo(beca_solicitud, { as: "id_beca_solicitud_beca_solicitud", foreignKey: "id_beca_solicitud"});
   beca_solicitud.hasMany(beca_automatizacion_log, { as: "beca_automatizacion_logs", foreignKey: "id_beca_solicitud"});
+  notificaciones.belongsTo(beca_solicitud, { as: "id_solicitud_beca_solicitud", foreignKey: "id_solicitud"});
+  beca_solicitud.hasMany(notificaciones, { as: "notificaciones", foreignKey: "id_solicitud"});
   beca.belongsTo(colegio, { as: "id_colegio_colegio", foreignKey: "id_colegio"});
   colegio.hasMany(beca, { as: "becas", foreignKey: "id_colegio"});
   beca_solicitud.belongsTo(colegio, { as: "id_colegio_solic_colegio", foreignKey: "id_colegio_solic"});
   colegio.hasMany(beca_solicitud, { as: "beca_solicituds", foreignKey: "id_colegio_solic"});
+  notificaciones.belongsTo(colegio, { as: "id_colegio_ofer_colegio", foreignKey: "id_colegio_ofer"});
+  colegio.hasMany(notificaciones, { as: "notificaciones", foreignKey: "id_colegio_ofer"});
+  notificaciones.belongsTo(colegio, { as: "id_colegio_solic_colegio", foreignKey: "id_colegio_solic"});
+  colegio.hasMany(notificaciones, { as: "id_colegio_solic_notificaciones", foreignKey: "id_colegio_solic"});
   red_colegio.belongsTo(colegio, { as: "id_colegio_colegio", foreignKey: "id_colegio"});
   colegio.hasMany(red_colegio, { as: "red_colegios", foreignKey: "id_colegio"});
   usuario.belongsTo(colegio, { as: "id_colegio_colegio", foreignKey: "id_colegio"});
@@ -159,6 +171,7 @@ export function initModels(sequelize: Sequelize) {
     beca_solicitud: beca_solicitud,
     colegio: colegio,
     menu: menu,
+    notificaciones: notificaciones,
     red: red,
     red_colegio: red_colegio,
     roles: roles,

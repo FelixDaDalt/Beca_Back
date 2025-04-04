@@ -235,7 +235,7 @@ const me = async (idUsuario:string) => {
     }
 }
 
-const comprobarDisponibilidad = async (cuit?: string, dni?: string, url?: string, dniAdmin?:string) => {
+const comprobarDisponibilidad = async (cuit?: string, dni?: string,  dniAdmin?:string) => {
     try{
         let resultado: { disponible: boolean } = {disponible:false};
 
@@ -251,12 +251,6 @@ const comprobarDisponibilidad = async (cuit?: string, dni?: string, url?: string
             return resultado
         }
     
-        if (url) {
-            const findUrl = await colegio.findOne({ where: { url } });
-            resultado.disponible = !findUrl; // Si no existe, es disponible
-            return resultado
-        }
-
         if (dniAdmin) {
             const dni = dniAdmin
             const findDniAdmin = await administrador.findOne({ where: { dni,borrado:0 } });

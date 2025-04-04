@@ -5,6 +5,7 @@ import type { beca_automatizacion_log, beca_automatizacion_logId } from './beca_
 import type { beca_estado, beca_estadoId } from './beca_estado';
 import type { beca_resolucion, beca_resolucionId } from './beca_resolucion';
 import type { colegio, colegioId } from './colegio';
+import type { notificaciones, notificacionesId } from './notificaciones';
 import type { usuario, usuarioId } from './usuario';
 
 export interface beca_solicitudAttributes {
@@ -30,7 +31,7 @@ export interface beca_solicitudAttributes {
   sinLeerSolicitante?: number;
   id_pariente: number;
   notificarPorVencer?: number;
-  notificarVencida?:number;
+  notificarVencida?: number;
 }
 
 export type beca_solicitudPk = "id";
@@ -61,7 +62,7 @@ export class beca_solicitud extends Model<beca_solicitudAttributes, beca_solicit
   sinLeerSolicitante?: number;
   id_pariente!: number;
   notificarPorVencer?: number;
-  notificarVencida?:number;
+  notificarVencida?: number;
 
   // beca_solicitud belongsTo beca via id_beca
   id_beca_beca!: beca;
@@ -90,6 +91,18 @@ export class beca_solicitud extends Model<beca_solicitudAttributes, beca_solicit
   hasBeca_automatizacion_log!: Sequelize.HasManyHasAssociationMixin<beca_automatizacion_log, beca_automatizacion_logId>;
   hasBeca_automatizacion_logs!: Sequelize.HasManyHasAssociationsMixin<beca_automatizacion_log, beca_automatizacion_logId>;
   countBeca_automatizacion_logs!: Sequelize.HasManyCountAssociationsMixin;
+  // beca_solicitud hasMany notificaciones via id_solicitud
+  notificaciones!: notificaciones[];
+  getNotificaciones!: Sequelize.HasManyGetAssociationsMixin<notificaciones>;
+  setNotificaciones!: Sequelize.HasManySetAssociationsMixin<notificaciones, notificacionesId>;
+  addNotificacione!: Sequelize.HasManyAddAssociationMixin<notificaciones, notificacionesId>;
+  addNotificaciones!: Sequelize.HasManyAddAssociationsMixin<notificaciones, notificacionesId>;
+  createNotificacione!: Sequelize.HasManyCreateAssociationMixin<notificaciones>;
+  removeNotificacione!: Sequelize.HasManyRemoveAssociationMixin<notificaciones, notificacionesId>;
+  removeNotificaciones!: Sequelize.HasManyRemoveAssociationsMixin<notificaciones, notificacionesId>;
+  hasNotificacione!: Sequelize.HasManyHasAssociationMixin<notificaciones, notificacionesId>;
+  hasNotificaciones!: Sequelize.HasManyHasAssociationsMixin<notificaciones, notificacionesId>;
+  countNotificaciones!: Sequelize.HasManyCountAssociationsMixin;
   // beca_solicitud belongsTo colegio via id_colegio_solic
   id_colegio_solic_colegio!: colegio;
   getId_colegio_solic_colegio!: Sequelize.BelongsToGetAssociationMixin<colegio>;
