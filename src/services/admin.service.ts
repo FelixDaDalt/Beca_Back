@@ -5,6 +5,7 @@ import { usuario } from "../models/usuario"
 import { tyc } from "../models/tyc"
 import { Op, Transaction } from "sequelize"
 import { roles } from "../models/roles"
+import { autorizados } from "../models/autorizados"
 
 const altaAdministrador = async (nuevoAdmin: administrador, transaction: Transaction) => {
     try {
@@ -235,7 +236,7 @@ const me = async (idUsuario:string) => {
     }
 }
 
-const comprobarDisponibilidad = async (cuit?: string, dni?: string,  dniAdmin?:string) => {
+const comprobarDisponibilidad = async (cuit?: string, dni?: string, dniAdmin?:string, dniAutorizado?:string, idColegio?:string,) => {
     try{
         let resultado: { disponible: boolean } = {disponible:false};
 
@@ -255,6 +256,19 @@ const comprobarDisponibilidad = async (cuit?: string, dni?: string,  dniAdmin?:s
             const dni = dniAdmin
             const findDniAdmin = await administrador.findOne({ where: { dni,borrado:0 } });
             resultado.disponible = !findDniAdmin; // Si no existe, es disponible
+            return resultado
+        }
+
+        if(dniAutorizado){
+            if(!idColegio){
+                const error = new Error('Debe proporcionar el colegio');
+                (error as any).statusCode = 400; 
+                throw error;
+            }
+
+            const dni = dniAutorizado
+            const findDniAutorizado = await autorizados.findOne({ where: { dni:dni, id_colegio:idColegio, borrado:0 } });
+            resultado.disponible = !findDniAutorizado; // Si no existe, es disponible
             return resultado
         }
 

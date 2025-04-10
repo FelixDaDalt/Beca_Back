@@ -130,11 +130,14 @@ const Me = async (req:RequestExt,res:Response)=>{
 //OTROS
 const Comprobar = async (req:RequestExt,res:Response)=>{
     try{ 
-        const { cuit, dni, dniAdmin } = req.query;    
+        const id_colegio = req.user?.id_colegio
+        const { cuit, dni, dniAdmin, dniAutorizado } = req.query;    
         const comprobacion = await comprobarDisponibilidad(
             cuit as string | undefined,
             dni as string | undefined,
-            dniAdmin as string | undefined)
+            dniAdmin as string | undefined,
+            dniAutorizado as string | undefined,
+            id_colegio as string | undefined)
         res.status(200).send(comprobacion);
     }catch(e){
         handleHttp(res,'Error al comprobar',e)    

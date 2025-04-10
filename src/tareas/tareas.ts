@@ -8,461 +8,449 @@ import { red_colegio } from '../models/red_colegio';
 import { enviarCorreo } from '../services/email.service';
 import { beca_automatizacion_log } from '../models/beca_automatizacion_log';
 import { notificaciones } from '../models/notificaciones';
+import { beca_automatizacion_ejecucion } from '../models/beca_automatizacion_ejecucion';
 
 
 const diasVencimiento = 2;
 const diasNotificar = 1;
 
-const minutosVencimiento = 5;
-const minutosNotificar = 2;
+const minutosVencimiento = Number(process.env.MINUTOS_VENCIMIENTO);
+const minutosNotificar = Number(process.env.MINUTOS_NOTIFICAR);
 
-// Programar la tarea cada 5 minutos
-cron.schedule('*/1 * * * *', async () => {
-    console.log('⏳ Ejecutando tarea programada');
-    await notificarBecasVencidas();
-    await notificarBecasPorVencer();
-}, {
-    timezone: "America/Argentina/Buenos_Aires" // Ajusta según tu zona horaria
-});
+// BECAS VENCIDAS Y POR VENCER
+// cron.schedule('*/1 * * * *', async () => {
+//     console.log('⏳ Ejecutando tarea programada');
+//     await notificarBecasVencidas();
+//     await notificarBecasPorVencer();
+// }, {
+//     timezone: "America/Argentina/Buenos_Aires" // Ajusta según tu zona horaria
+// });
 
-async function notificarBecasVencidas() {
-    const t = await sequelize.transaction();
-    try {
-        console.log("🔎 1-Verificando becas vencidas...");
-        const becasVencidas = await beca_solicitud.findAll({
-            where: {
-                id_estado: 0,
-                notificarVencida:0,
-                fecha_hora: {
-                    // [Op.lte]: new Date(Date.now() - diasVencimiento * 24 * 60 * 60 * 1000),
-                    [Op.lte]: new Date(Date.now() - minutosVencimiento * 60 * 1000)
-                },
-            },
-            include: [
-                {
-                    model: beca,
-                    as: "id_beca_beca",
-                    attributes: ["id_colegio"],
-                },
-            ],
-            transaction: t
-        });
-        if (becasVencidas.length === 0) {
-            console.log("✅ Exit - No hay becas vencidas.");
-            await t.commit();
-            return;
-        }
+// 🎯 Becas Vencidas
+export async function notificarBecasVencidas() {
+  console.log("🔎 1 - Verificando becas vencidas...");
 
-        console.log(`⏳ 2- Procesando ${becasVencidas.length} becas vencidas...`);
-        // Obtener los IDs de colegios afectados en una sola consulta
-        const colegiosIds = [
-            ...new Set(becasVencidas.flatMap((b) => [b.id_colegio_solic, b.id_beca_beca.id_colegio])),
-        ];
-        // Obtener emails de los colegios
-        const colegios = await colegio.findAll({
-            where: {
-                id: {
-                    [Op.in]: colegiosIds,
-                },
-            },
-            attributes: ["id", "email", "nombre"],
-            transaction: t
-        });
-        //Crear Map
-        const colegiosMap = colegios.reduce((acc, colegio) => {
-            acc[colegio.id] = {
-                email: colegio.email,
-                nombre: colegio.nombre
-            };
-            return acc;
-        }, {} as Record<number, { email: string | undefined; nombre: string }>);
-        console.log("✅ Procesamiento correcto.");
-
-        console.log(`⏳ 3- Marcando becas como vencidas y notificar...`);
-        // Marcar becas como vencidas
-        await beca_solicitud.update(
-            { id_estado: 4 },
-            {
-                where: { id: becasVencidas.map((b) => b.id) },
-                transaction: t
-            }
-        );
-
-        // NOTIFICAR
-        await notificaciones.update(
-          { vencida: 1,
-            leido_ofer:0,
-            leido_solic:0 
-          },
-          {
-              where: { id_solicitud: becasVencidas.map((b) => b.id) },
-              transaction: t
-          }
-        );
-        console.log("✅ Marcadas correctamente.");
-
-        console.log("⏳ 4 - Actualizando Red_Colegio..");
-        // Actualizar `red_colegio` en paralelo
-        const redUpdates = becasVencidas.map(async (beca) => {
-            const { id_colegio_solic, id_beca_beca: { id_colegio } } = beca;
-
-            // Colegio solicitante
-            await red_colegio.update(
-                {
-                    dbu: sequelize.literal("dbu - 1"),
-                    dbd: sequelize.literal("db - dbu"),
-                },
-                { where: { id_colegio: id_colegio_solic }, transaction: t }
-            );
-
-            // Colegio que ofreció la beca
-            await red_colegio.update(
-                {
-                    bsp: sequelize.literal("bsp - 1"),
-                    bde: sequelize.literal("btp - bsa - bsp"),
-                },
-                { where: { id_colegio: id_colegio }, transaction: t }
-            );
-        });
-        // Esperar a que todos los updates se completen
-        await Promise.all(redUpdates);
-        console.log("✅ Red_colegio actualizadas correctamente.");
-
-        console.log(`⏳ 5 - Registrando Log...`);
-        // Registrar logs en masa
-        const logs = becasVencidas.map((beca) => {
-            const colegioSolicitante = colegiosMap[beca.id_colegio_solic];
-            const colegioOfrecio = colegiosMap[beca.id_beca_beca.id_colegio];
-
-            return {
-                id_beca_solicitud: beca.id,
-                id_estado_anterior: beca.id_estado,
-                id_estado_nuevo: 4,
-                tipo_notificacion: 'VENCIDA' as 'VENCIDA',
-                email_colegio_solicitante: colegioSolicitante?.email,
-                email_colegio_ofrecio: colegioOfrecio?.email,
-                motivo: "Vencimiento automático",
-            };
-        });
-        await beca_automatizacion_log.bulkCreate(logs, { transaction: t });
-        console.log("✅ Log Registrado.");
-
-        await t.commit();
-
-        // console.log("⏳ 6 - Procesando Correos.");
-        // // Función para enviar correo con timeout
-        // const enviar = (email:any, asunto:any, mensaje:any) => {
-        //     const timeout = new Promise((_, reject) =>
-        //         setTimeout(() => reject(new Error('Timeout alcanzado para el envío de correo')), 15000) // 15 segundos de timeout
-        //     );
-
-        //     const enviar = enviarCorreo(
-        //         email,
-        //         asunto,
-        //         mensaje,
-        //         `<h1>${asunto}</h1><p>${mensaje}</p>`
-        //     );
-
-        //     return Promise.race([enviar, timeout]); // Cualquiera de las dos promesas que se resuelva primero, la otra será rechazada
-        // };
-
-        // // Enviar correos de notificación en paralelo
-        // const correoPromises = becasVencidas.map(async (beca) => {
-        //     const colegioSolicitante = colegiosMap[beca.id_colegio_solic];
-        //     const colegioOfrecio = colegiosMap[beca.id_beca_beca.id_colegio];
-
-        //     try {
-        //         await Promise.all([
-        //             enviar(colegioSolicitante?.email, "📌 Beca Vencida", `La beca que solicitaste ha vencido.`),
-        //             enviar(colegioOfrecio?.email, "📌 Beca Vencida", `Una beca que te solicitaron ha vencido.`),
-        //         ]);
-        //     } catch (error) {
-        //         console.error(`⚠️ Error al enviar correo:`, error);
-        //     }
-        // });
-
-        // // Esperar a que todos los correos se envíen
-        // await Promise.all(correoPromises);
-        // console.log("📨 Correos enviados correctamente.");
-  
-        console.log("✅ Exit - Becas vencidas.");
-    } catch (error) {
-        await t.rollback();
-        console.error("❌ Error en la verificación de vencimientos:", error);
-    }
-}
-
-async function notificarBecasPorVencer() {
-  const t = await sequelize.transaction();
-  try {
-    console.log("🔎 1- Verificando becas por vencer...");
-    // 1️⃣ Obtener becas por vencer (estado = 0 y faltan 2 minutos para vencer)
-    const becasPorVencer = await beca_solicitud.findAll({
-      where: {
-        id_estado: 0, // Solo becas activas
-        notificarPorVencer: 0, // Solo becas que no han sido notificadas aún
-        // Verifica si la fecha de vencimiento está dentro de 2 minutos desde ahora
-        [Op.and]: [
-          // Sequelize.literal(`NOW() >= DATE_ADD(beca_solicitud.fecha_hora, INTERVAL ${diasVencimiento - diasNotificar} DAY)`),
-          // Sequelize.literal(`NOW() <= DATE_ADD(beca_solicitud.fecha_hora, INTERVAL ${diasVencimiento - diasNotificar + 1} DAY)`)
-          Sequelize.literal(
-            `NOW() >= DATE_ADD(beca_solicitud.fecha_hora, INTERVAL ${
-              minutosVencimiento - minutosNotificar
-            } MINUTE)`
-          ),
-          Sequelize.literal(
-            `NOW() <= DATE_ADD(beca_solicitud.fecha_hora, INTERVAL ${
-              minutosVencimiento - minutosNotificar + minutosNotificar
-            } MINUTE)`
-          ),
-        ],
-      },
-      include: [
-        {
-          model: beca,
-          as: "id_beca_beca",
-          attributes: ["id_colegio"],
-        },
-      ],
-      transaction: t,
-    });
-
-    if (becasPorVencer.length === 0) {
-      console.log("✅ Exit - No hay becas próximas a vencer.");
-      await t.commit();
-      return;
-    }
-
-    console.log(`⏳ 2 - Procesando ${becasPorVencer.length} becas por vencer...`);
-    // Obtener los IDs de colegios afectados
-    const colegiosIds = [
-      ...new Set(
-        becasPorVencer.flatMap((b) => [
-          b.id_colegio_solic,
-          b.id_beca_beca.id_colegio,
-        ])
-      ),
-    ];
-    // Obtener emails de los colegios
-    const colegios = await colegio.findAll({
-      where: {
-        id: {
-          [Op.in]: colegiosIds,
-        },
-      },
-      attributes: ["id", "email", "nombre"],
-      transaction: t,
-    });
-
-    const colegiosMap = colegios.reduce((acc, colegio) => {
-      acc[colegio.id] = {
-        email: colegio.email,
-        nombre: colegio.nombre,
-      };
-      return acc;
-    }, {} as Record<number, { email: string | undefined; nombre: string }>);
-    console.log("✅ Procesamiento correcto.");
-
-    console.log(`⏳ 3 - Marcando becas por vencer y notificar`);
-    await beca_solicitud.update(
-      { notificarPorVencer: 1,sinLeerSolicitante: 1, sinLeer: 1 },
-      {
-        where: {
-          id: becasPorVencer.map((b) => b.id),
-        },
-        transaction: t,
+  // 🚀 LECTURA SIN transacción
+  const becasVencidas = await beca_solicitud.findAll({
+    where: {
+      id_estado: 0,
+      notificarVencida: 0,
+      fecha_hora: {
+        [Op.lte]: new Date(Date.now() - minutosVencimiento * 60 * 1000)
       }
+    },
+    include: [{ model: beca, as: "id_beca_beca", attributes: ["id_colegio"] }]
+  });
+
+  if (becasVencidas.length === 0) {
+    console.log("✅ Exit - No hay becas vencidas.");
+    const ejecucion = await registrarEjecucionAutomatizacion('VENCIDA', 'EXITO',becasVencidas.length, null);
+    return {
+      id:ejecucion.id,
+      becasProcesadas: 0,
+      colegiosInvolucrados: []
+    };
+  }
+
+  const colegiosIds = [
+    ...new Set(becasVencidas.flatMap(b => [b.id_colegio_solic, b.id_beca_beca.id_colegio]))
+  ];
+
+  const colegios = await colegio.findAll({
+    where: { id: { [Op.in]: colegiosIds } },
+    attributes: ["id", "email", "nombre"]
+  });
+
+  const colegiosMap = colegios.reduce((acc, colegio) => {
+    acc[colegio.id] = { email: colegio.email, nombre: colegio.nombre };
+    return acc;
+  }, {} as Record<number, { email: string | undefined; nombre: string }>);
+
+  console.log("✅ Becas y colegios leídos correctamente.");
+
+  // 🚀 ESCRITURA CON transacción
+  const t = await sequelize.transaction();
+  let ejecucion: any = null;
+
+  try {
+    console.log("⏳ 2 - Registrando inicio de ejecución...");
+
+    // 👇 Crear registro de ejecución
+    ejecucion = await registrarEjecucionAutomatizacion('VENCIDA', 'EXITO',becasVencidas.length, null, t);
+
+    console.log("✅ Registro de ejecución creado:", ejecucion.id);
+
+    console.log("⏳ 3 - Actualizando estados y red_colegio...");
+
+    await beca_solicitud.update(
+      { id_estado: 4 },
+      { where: { id: becasVencidas.map(b => b.id) }, transaction: t }
     );
 
     await notificaciones.update(
-      { porvencer: 1,
-        leido_ofer:0,
-        leido_solic:0 
-      },
-      {
-          where: { id_solicitud: becasPorVencer.map((b) => b.id) },
-          transaction: t
-      }
+      { vencida: 1, leido_ofer: 0, leido_solic: 0 },
+      { where: { id_solicitud: becasVencidas.map(b => b.id) }, transaction: t }
     );
-    console.log("✅ Marcadas correctamente");
 
-    console.log(`⏳ 4 - Registrando Log`);
-    // 6️⃣ Registrar en el Log
-    const logs = becasPorVencer.map((beca) => {
-      const colegioSolicitante = colegiosMap[beca.id_colegio_solic];
-      const colegioOfrecio = colegiosMap[beca.id_beca_beca.id_colegio];
+    await actualizarRedColegiosSQL(becasVencidas, t);
 
-      return {
-        id_beca_solicitud: beca.id,
-        id_estado_anterior: beca.id_estado, // Estado antes del vencimiento
-        id_estado_nuevo: beca.id_estado, // Estado "vencida"
-        tipo_notificacion: "POR_VENCER" as "POR_VENCER",
-        email_colegio_solicitante: colegioSolicitante?.email,
-        email_colegio_ofrecio: colegioOfrecio?.email,
-        motivo: "POR VENCER automático",
-      };
-    });
+    console.log("⏳ 4 - Registrando logs de becas...");
+
+    const logs = becasVencidas.map(beca => ({
+      id_beca_solicitud: beca.id,
+      id_estado_anterior: 0,
+      id_estado_nuevo: 4,
+      tipo_notificacion: 'VENCIDA' as 'VENCIDA',
+      email_colegio_solicitante: colegiosMap[beca.id_colegio_solic]?.email,
+      email_colegio_ofrecio: colegiosMap[beca.id_beca_beca.id_colegio]?.email,
+      motivo: "Vencimiento automático",
+      id_ejecucion: ejecucion.id // 👈 Guardar el id de esta ejecución
+    }));
+
     await beca_automatizacion_log.bulkCreate(logs, { transaction: t });
-    console.log("✅ Log registrado.");
+
     await t.commit();
+    console.log("✅ Becas vencidas procesadas correctamente.");
 
-    // console.log(`⏳ 5 - Procesando Correos`);
-    // const enviar = (email:any, asunto:any, mensaje:any) => {
-    //     const timeout = new Promise((_, reject) =>
-    //         setTimeout(() => reject(new Error('Timeout alcanzado para el envío de correo')), 15000) // 15 segundos de timeout
-    //     );
+    // 🚀 RESPUESTA
+    return {
+      id:ejecucion.id,
+      becasProcesadas: becasVencidas.length,
+      colegiosInvolucrados: becasVencidas.map(beca => ({
+        beca: beca.id,
+        colegioSolicitante: colegiosMap[beca.id_colegio_solic]?.nombre || 'Desconocido',
+        colegioOfrecio: colegiosMap[beca.id_beca_beca.id_colegio]?.nombre || 'Desconocido'
+      }))
+    };
 
-    //     const enviar = enviarCorreo(
-    //         email,
-    //         asunto,
-    //         mensaje,
-    //         `<h1>${asunto}</h1><p>${mensaje}</p>`
-    //     );
+  } catch (error:any) {
+    console.error("❌ Error al procesar becas vencidas:", error);
 
-    //     return Promise.race([enviar, timeout]); // Cualquiera de las dos promesas que se resuelva primero, la otra será rechazada
-    // };
-    // // Enviar correos de notificación en paralelo
-    // const correoPromises = becasPorVencer.map(async (beca) => {
-    //     const colegioSolicitante = colegiosMap[beca.id_colegio_solic];
-    //     const colegioOfrecio = colegiosMap[beca.id_beca_beca.id_colegio];
-
-    //     try {
-    //         await Promise.all([
-    //             enviar(colegioSolicitante?.email, "⏰ Beca por Vencer", `La beca solicitada a ${colegioOfrecio.nombre} está por vencer.`),
-    //             enviar(colegioOfrecio?.email, "⏰ Beca por Vencer", `Una beca solicitada por ${colegioSolicitante.nombre} está por vencer.`),
-    //         ]);
-    //     } catch (error) {
-    //         console.error(`⚠️ Error al enviar correo:`, error);
-    //     }
-    // });
-    // // Esperar a que todos los correos se envíen
-    // await Promise.all(correoPromises);
-    // console.log("📨 Correos enviados correctamente");
-
-    console.log("✅ Exit - Becas por vencer.");
-  } catch (error) {
     await t.rollback();
-    console.error("❌ Error en la verificación de becas por vencer:", error);
+
+    // 👇 Crear registro de ejecución fallida
+    ejecucion = await registrarEjecucionAutomatizacion('VENCIDA', 'ERROR',becasVencidas.length, null, t);
+
+    throw error;
   }
 }
 
 
-cron.schedule("*/2 * * * *", async () => {
+
+// 🎯 Becas Por Vencer
+export async function notificarBecasPorVencer() {
+    console.log("🔎 1 - Verificando becas por vencer...");
+  
+    const becasPorVencer = await beca_solicitud.findAll({
+      where: {
+        id_estado: 0,
+        notificarPorVencer: 0,
+        [Op.and]: [
+          Sequelize.literal(`NOW() >= DATE_ADD(beca_solicitud.fecha_hora, INTERVAL ${minutosVencimiento - minutosNotificar} MINUTE)`),
+          Sequelize.literal(`NOW() <= DATE_ADD(beca_solicitud.fecha_hora, INTERVAL ${minutosVencimiento - minutosNotificar + minutosNotificar} MINUTE)`)
+        ]
+      },
+      include: [{ model: beca, as: "id_beca_beca", attributes: ["id_colegio"] }]
+    });
+  
+    if (becasPorVencer.length === 0) {
+      console.log("✅ Exit - No hay becas próximas a vencer.");
+      const ejecucion = await registrarEjecucionAutomatizacion('POR_VENCER', 'EXITO', becasPorVencer.length);
+      return {
+        id:ejecucion.id,
+        becasProcesadas: 0,
+        colegiosInvolucrados: []
+      };
+    }
+  
+    const colegiosIds = [
+      ...new Set(becasPorVencer.flatMap(b => [b.id_colegio_solic, b.id_beca_beca.id_colegio]))
+    ];
+  
+    const colegios = await colegio.findAll({
+      where: { id: { [Op.in]: colegiosIds } },
+      attributes: ["id", "email", "nombre"]
+    });
+  
+    const colegiosMap = colegios.reduce((acc, colegio) => {
+      acc[colegio.id] = { email: colegio.email, nombre: colegio.nombre };
+      return acc;
+    }, {} as Record<number, { email: string | undefined; nombre: string }>);
+  
+    console.log("✅ Becas y colegios leídos correctamente.");
+  
+    // 🚀 INICIO de transacción
     const t = await sequelize.transaction();
+    let ejecucion: any = null;
   
     try {
-        console.log("🔎 1-Verificando becas pendiente de baja...");
-        // 1️⃣ Obtener becas en estado 3 (solicitadas para baja) con sus colegios
-        const becasPendientes = await beca_solicitud.findAll({
-            where: { id_estado: 3 },
-            include: [
-            { model: beca, as: "id_beca_beca", attributes: ["id_colegio"] },
-            ],
-            transaction: t,
-        });
+      console.log("⏳ 2 - Registrando inicio de ejecución...");
   
-        if (becasPendientes.length === 0) {
-            console.log("✅ No hay becas pendientes de baja.");
-            await t.commit();
-            return;
-        }
+      // 👇 Crear registro de ejecución
+      ejecucion = await registrarEjecucionAutomatizacion('POR_VENCER', 'EXITO',becasPorVencer.length, null, t);
   
-        console.log(`⏳ 2-Procesando ${becasPendientes.length} becas pendiente de baja...`);
-    
-            const colegiosIds = [
-                ...new Set(
-                becasPendientes.flatMap((b) => [b.id_colegio_solic, b.id_beca_beca.id_colegio])
-                ),
-            ];
-        
-            const colegios = await colegio.findAll({
-                where: { id: { [Op.in]: colegiosIds } },
-                attributes: ["id", "email", "nombre"],
-                transaction: t,
-            });
-        
-            const colegiosMap = Object.fromEntries(
-                colegios.map(({ id, email, nombre }) => [id, { email, nombre }])
-            );
-
-      console.log("⏳ 3-Actualizando a estado BAJA..");
+      console.log("✅ Registro de ejecución creado:", ejecucion.id);
+  
+      console.log("⏳ 3 - Actualizando estado de notificaciones...");
+  
       await beca_solicitud.update(
-          { id_estado: 6 },
-          { where: { id_estado: 3 }, 
-          transaction: t }
+        { notificarPorVencer: 1, sinLeerSolicitante: 1, sinLeer: 1 },
+        { where: { id: becasPorVencer.map(b => b.id) }, transaction: t }
       );
-      console.log("✅ estado actualizado correctamente.");
   
-      console.log("⏳ 4-Actualizando red_colegio.");
-      await Promise.all(
-        becasPendientes.flatMap(({ id_colegio_solic, id_beca_beca }) => [
-          red_colegio.update(
-            { dbu: sequelize.literal("dbu - 1"), dbd: sequelize.literal("db - dbu") },
-            { where: { id_colegio: id_colegio_solic }, transaction: t }
-          ),
-          red_colegio.update(
-            { bsa: sequelize.literal("bsa - 1"), bde: sequelize.literal("btp - bsa - bsp") },
-            { where: { id_colegio: id_beca_beca.id_colegio }, transaction: t }
-          ),
-        ])
+      await notificaciones.update(
+        { porvencer: 1, leido_ofer: 0, leido_solic: 0 },
+        { where: { id_solicitud: becasPorVencer.map(b => b.id) }, transaction: t }
       );
-      console.log("✅ `red_colegio` actualizado correctamente.");
   
-      console.log(`⏳ 5 - Registrando Log...`);
-      // 6️⃣ Registrar logs en un solo `bulkCreate`
-      await beca_automatizacion_log.bulkCreate(
-        becasPendientes.map(({ id, id_colegio_solic, id_beca_beca }) => ({
-          id_beca_solicitud: id,
-          id_estado_anterior: 3,
-          id_estado_nuevo: 6,
-          tipo_notificacion: 'BAJA' as 'BAJA',
-          email_colegio_solicitante: colegiosMap[id_colegio_solic]?.email,
-          email_colegio_ofrecio: colegiosMap[id_beca_beca.id_colegio]?.email,
-          motivo: "Baja automática",
-        })),
-        { transaction: t }
-      );
-      console.log("✅ Log Registrado.");
+      console.log("⏳ 4 - Registrando logs de cada beca...");
+  
+      const logs = becasPorVencer.map(beca => ({
+        id_beca_solicitud: beca.id,
+        id_estado_anterior: 0,
+        id_estado_nuevo: 0,
+        tipo_notificacion: 'POR_VENCER' as 'POR_VENCER',
+        email_colegio_solicitante: colegiosMap[beca.id_colegio_solic]?.email,
+        email_colegio_ofrecio: colegiosMap[beca.id_beca_beca.id_colegio]?.email,
+        motivo: "POR VENCER automático",
+        id_ejecucion: ejecucion.id // 👈 Enlazar cada log con la ejecución
+      }));
+  
+      await beca_automatizacion_log.bulkCreate(logs, { transaction: t });
+  
       await t.commit();
+      console.log("✅ Becas por vencer procesadas correctamente.");
   
-      console.log(`⏳ 5 - Procesando Correos`);
-      // 7️⃣ Enviar correos en paralelo
-      const enviar = (email:any, asunto:any, mensaje:any) => {
-        const timeout = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Timeout alcanzado para el envío de correo')), 15000) // 15 segundos de timeout
-        );
-
-        const enviar = enviarCorreo(
-            email,
-            asunto,
-            mensaje,
-            `<h1>${asunto}</h1><p>${mensaje}</p>`
-        );
-
-        return Promise.race([enviar, timeout]); // Cualquiera de las dos promesas que se resuelva primero, la otra será rechazada
-        };
-        // Enviar correos de notificación en paralelo
-        const correoPromises = becasPendientes.map(async (beca) => {
-        const colegioSolicitante = colegiosMap[beca.id_colegio_solic];
-        const colegioOfrecio = colegiosMap[beca.id_beca_beca.id_colegio];
-
-        try {
-            await Promise.all([
-                enviar(colegioSolicitante?.email, "📌 Beca Dada de Baja", `La beca solicitada a ${colegioOfrecio?.nombre} ha sido dada de baja.`),
-                enviar(colegioOfrecio?.email, "📌 Beca Dada de Baja", `Una beca solicitada por ${colegioSolicitante?.nombre} ha sido dada de baja.`),
-            ]);
-        } catch (error) {
-            console.error(`⚠️ Error al enviar correo:`, error);
-        }
-        });
-        // Esperar a que todos los correos se envíen
-        await Promise.all(correoPromises);
-        console.log("📨 Correos enviados correctamente.");
-        
-        console.log("✅ Exit - Becas solicitadas de baja.");
-    } catch (error) {
+      return {
+        id:ejecucion.id,
+        becasProcesadas: becasPorVencer.length,
+        colegiosInvolucrados: becasPorVencer.map(beca => ({
+          beca: beca.id,
+          colegioSolicitante: colegiosMap[beca.id_colegio_solic]?.nombre || 'Desconocido',
+          colegioOfrecio: colegiosMap[beca.id_beca_beca.id_colegio]?.nombre || 'Desconocido'
+        }))
+      };
+  
+    } catch (error:any) {
+      console.error("❌ Error al procesar becas por vencer:", error);
+  
       await t.rollback();
-      console.error("❌ Error en la actualización de becas dadas de baja:", error);
-    }
-  });
   
+      // 👇 Crear registro de ejecución fallida
+       await registrarEjecucionAutomatizacion('POR_VENCER', 'ERROR',0, error.message);
+  
+      throw error;
+    }
+}
+/////////////////////////////////
+
+
+
+// BECAS DADA DE BAJAS, CADA UN AÑO
+  // "0 0 1 11 *" 1 de noviembre de cada año
+  
+// cron.schedule("*/2 * * * *", async () => {
+//     await procesarBecasDadaBaja()
+//   },{
+//     timezone: "America/Argentina/Buenos_Aires" // Ajusta según tu zona horaria
+// });
+
+export async function procesarBecasDadaBaja() {
+  console.log("🔎 1 - Verificando becas pendientes de baja...");
+
+  // 🚀 LECTURA SIN transacción
+  const becasPendientes = await beca_solicitud.findAll({
+    where: { id_estado: 3 },
+    include: [{ model: beca, as: "id_beca_beca", attributes: ["id_colegio"] }],
+  });
+
+  if (becasPendientes.length === 0) {
+    console.log("✅ No hay becas pendientes de baja.");
+    const ejecucion = await registrarEjecucionAutomatizacion('BAJA', 'EXITO', becasPendientes.length);
+    return {id:ejecucion.id, becasProcesadas: 0, colegiosInvolucrados: [] };
+  }
+
+  console.log(`⏳ 2 - Procesando ${becasPendientes.length} becas...`);
+
+  const colegiosIds = [
+    ...new Set(
+      becasPendientes.flatMap(b => [b.id_colegio_solic, b.id_beca_beca.id_colegio])
+    ),
+  ];
+
+  const colegios = await colegio.findAll({
+    where: { id: { [Op.in]: colegiosIds } },
+    attributes: ["id", "email", "nombre"],
+  });
+
+  const colegiosMap = colegios.reduce((acc, colegio) => {
+    acc[colegio.id] = { email: colegio.email, nombre: colegio.nombre };
+    return acc;
+  }, {} as Record<number, { email: string | undefined; nombre: string }>);
+
+  // 🚀 ESCRITURA CON transacción
+  const t = await sequelize.transaction();
+  let ejecucion: any = null;
+
+  try {
+    console.log("⏳ 3 - Registrando inicio de ejecución...");
+
+    // 👇 Crear registro de ejecución
+    ejecucion = await registrarEjecucionAutomatizacion('BAJA', 'EXITO',becasPendientes.length, null, t);
+
+    console.log("✅ Registro de ejecución creado:", ejecucion.id);
+
+    console.log("⏳ 4 - Actualizando estados y red_colegio...");
+
+    await beca_solicitud.update(
+      { id_estado: 6 },
+      { where: { id_estado: 3 }, transaction: t }
+    );
+
+    await actualizarRedColegiosSQL(becasPendientes, t);
+
+    console.log("⏳ 5 - Registrando logs...");
+
+    await beca_automatizacion_log.bulkCreate(
+      becasPendientes.map(({ id, id_colegio_solic, id_beca_beca }) => ({
+        id_beca_solicitud: id,
+        id_estado_anterior: 3,
+        id_estado_nuevo: 6,
+        tipo_notificacion: 'BAJA' as 'BAJA',
+        email_colegio_solicitante: colegiosMap[id_colegio_solic]?.email,
+        email_colegio_ofrecio: colegiosMap[id_beca_beca.id_colegio]?.email,
+        motivo: "Baja automática",
+        id_ejecucion: ejecucion.id // 👈 Relacionar cada log con esta ejecución
+      })),
+      { transaction: t }
+    );
+
+    await t.commit();
+    console.log("✅ Base de datos actualizada correctamente.");
+
+    console.log(`⏳ 6 - Enviando correos...`);
+
+    const enviar = (email: any, asunto: any, mensaje: any) => {
+      const timeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout alcanzado para el envío de correo')), 15000)
+      );
+
+      const enviar = enviarCorreo(
+        email,
+        asunto,
+        mensaje,
+        `<h1>${asunto}</h1><p>${mensaje}</p>`
+      );
+
+      return Promise.race([enviar, timeout]);
+    };
+
+    const correoPromises = becasPendientes.map(async (beca) => {
+      const colegioSolicitante = colegiosMap[beca.id_colegio_solic];
+      const colegioOfrecio = colegiosMap[beca.id_beca_beca.id_colegio];
+
+      try {
+        await Promise.all([
+          enviar(colegioSolicitante?.email, "📌 Beca Dada de Baja", `La beca solicitada a ${colegioOfrecio?.nombre} ha sido dada de baja.`),
+          enviar(colegioOfrecio?.email, "📌 Beca Dada de Baja", `Una beca solicitada por ${colegioSolicitante?.nombre} ha sido dada de baja.`),
+        ]);
+      } catch (error) {
+        console.error(`⚠️ Error al enviar correo:`, error);
+      }
+    });
+
+    await Promise.all(correoPromises);
+    console.log("📨 Correos enviados correctamente.");
+    console.log("✅ Exit - Becas procesadas.");
+
+    return {
+      id:ejecucion.id,
+      becasProcesadas: becasPendientes.length,
+      colegiosInvolucrados: becasPendientes.map(beca => ({
+        beca: beca.id,
+        colegioSolicitante: colegiosMap[beca.id_colegio_solic]?.nombre || 'Desconocido',
+        colegioOfrecio: colegiosMap[beca.id_beca_beca.id_colegio]?.nombre || 'Desconocido'
+      }))
+    };
+
+  } catch (error:any) {
+    console.error("❌ Error al procesar becas dadas de baja:", error);
+
+    await t.rollback();
+
+    // 👇 Crear registro de ejecución fallida
+    await registrarEjecucionAutomatizacion('BAJA', 'ERROR',0, error.message);  
+
+    throw error;
+  }
+}
+
+
+export async function actualizarRedColegiosSQL(becasPendientes: any[], transaction: any) {
+  const cantidadSolicitantes = becasPendientes.reduce((acc, beca) => {
+    acc[beca.id_colegio_solic] = (acc[beca.id_colegio_solic] || 0) + 1;
+    return acc;
+  }, {} as Record<number, number>);
+
+  const cantidadOferentes = becasPendientes.reduce((acc, beca) => {
+    acc[beca.id_beca_beca.id_colegio] = (acc[beca.id_beca_beca.id_colegio] || 0) + 1;
+    return acc;
+  }, {} as Record<number, number>);
+
+  // 🚀 Actualizar solicitantes (se liberan becas solicitadas)
+  if (Object.keys(cantidadSolicitantes).length > 0) {
+    const solicitantesUpdate = `
+      UPDATE red_colegio
+      SET 
+        dbu = CASE id_colegio 
+          ${Object.entries(cantidadSolicitantes).map(([id, count]) => `WHEN ${id} THEN dbu - ${count}`).join(' ')}
+          ELSE dbu
+        END,
+        dbd = CASE id_colegio 
+          ${Object.entries(cantidadSolicitantes).map(([id, count]) => `WHEN ${id} THEN db - (dbu - ${count})`).join(' ')}
+          ELSE (db - dbu)
+        END
+      WHERE id_colegio IN (${Object.keys(cantidadSolicitantes).join(',')})
+    `;
+
+    await sequelize.query(solicitantesUpdate, { transaction });
+  }
+
+  // 🚀 Actualizar oferentes (se liberan becas ofertadas)
+  if (Object.keys(cantidadOferentes).length > 0) {
+    const oferentesUpdate = `
+      UPDATE red_colegio
+      SET 
+        bsa = CASE id_colegio 
+          ${Object.entries(cantidadOferentes).map(([id, count]) => `WHEN ${id} THEN bsa - ${count}`).join(' ')}
+          ELSE bsa
+        END,
+        bde = CASE id_colegio 
+          ${Object.entries(cantidadOferentes).map(([id, count]) => `WHEN ${id} THEN (btp - (bsa - ${count}) - bsp)`).join(' ')}
+          ELSE (btp - bsa - bsp)
+        END
+      WHERE id_colegio IN (${Object.keys(cantidadOferentes).join(',')})
+    `;
+
+    await sequelize.query(oferentesUpdate, { transaction });
+  }
+}
+
+///////////////////////////////////  
+
+async function registrarEjecucionAutomatizacion(
+  tipo: 'BAJA' | 'VENCIDA' | 'POR_VENCER',
+  estado: 'EXITO' | 'ERROR',
+  total_procesadas: number,
+  error: string | null = null,
+  transaction?: any // 👈 opcional, si querés pasar una transaction
+) {
+  const ejecucion = await beca_automatizacion_ejecucion.create({
+    tipo,
+    estado,
+    total_procesadas,
+    error:error?error:''
+  }, transaction ? { transaction } : {}); // Solo pasa {transaction} si existe
+
+  return ejecucion; // 👈 retornamos
+}

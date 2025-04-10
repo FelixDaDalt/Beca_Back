@@ -15,6 +15,12 @@ const sequelize = new Sequelize({
   host: process.env.DB_HOST!,
   port: Number(process.env.DB_PORT!),
   dialect: 'mysql',
+  pool: {
+    max: 20, // ✅ más conexiones
+    min: 5,
+    acquire: 60000, // ✅ 60 segundos
+    idle: 10000
+  },
   logging: false,
   timezone: '-03:00',
   dialectOptions: {

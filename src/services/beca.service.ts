@@ -468,12 +468,14 @@ const solicitudDetalle = async (idSolicitud:string, idRed: string, idColegio:str
                 solicitado:{
                     colegio:idRol === 0 ? solicitud.id_beca_beca.id_colegio_colegio : null,
                 }, 
-                baja:solicitud?.id_estado == 3,
-                ...(solicitud?.id_estado === 3 && { detalle_baja: {
-                    usuario:solicitud.id_usuario_baja_usuario,
-                    fecha:solicitud.baja_fecha_hora,
-                    comentario:solicitud.baja_comentario
-                }})
+                baja: solicitud?.id_estado === 3 || solicitud?.id_estado === 6,
+                ...( (solicitud?.id_estado === 3 || solicitud?.id_estado === 6) && { 
+                    detalle_baja: {
+                    usuario: solicitud.id_usuario_baja_usuario,
+                    fecha: solicitud.baja_fecha_hora,
+                    comentario: solicitud.baja_comentario
+                    }
+                })
             };       
 
         return procesado;
@@ -708,8 +710,8 @@ const miSolicitudDetalle = async (
                 dni: solicitud?.alumno_dni,
                 nacimiento: solicitud?.alumno_fecha,
             },
-            baja:solicitud?.id_estado == 3,
-                ...(solicitud?.id_estado === 3 && { detalle_baja: {
+            baja:solicitud?.id_estado == 3 || solicitud?.id_estado == 6,
+                ...((solicitud?.id_estado === 3 || solicitud?.id_estado == 6) && { detalle_baja: {
                     usuario:solicitud.id_usuario_baja_usuario,
                     fecha:solicitud.baja_fecha_hora,
                     comentario:solicitud.baja_comentario

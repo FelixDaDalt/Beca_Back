@@ -1,7 +1,7 @@
 import { Request, Response } from "express"
 import { handleHttp } from "../utils/error.handle"
 import { RequestExt } from "../middleware/session"
-import { altaColegio, borrarColegio, detalleColegio, editarColegio, listadoColegios, obtenerColegio, suspenderColegio } from "../services/colegio.service"
+import { altaColegio, borrarColegio, detalleColegio, editarColegio, listadoColegios, obtenerColegio, suspenderColegio, verColegio } from "../services/colegio.service"
 import sequelize from "../config/database"
 
 
@@ -118,6 +118,18 @@ const DetalleColegio = async (req:RequestExt,res:Response)=>{
     }
 }
 
+const VerColegio = async (req:RequestExt,res:Response)=>{
+    try{ 
+       
+        let idColegio = req.query.id
+        const detalle = await verColegio(idColegio as string)
+        const data = {"data":detalle,"mensaje":"Detalle del colegio"}
+        res.status(200).send(data);
+    }catch(e){
+        handleHttp(res,'Error al obtener el Detalle del colegio',e)    
+    }
+}
+
 const BorrarColegio = async (req:RequestExt,res:Response)=>{
     const transaction = await sequelize.transaction();
     try{ 
@@ -138,4 +150,4 @@ const BorrarColegio = async (req:RequestExt,res:Response)=>{
     }
 }
 
-export {ObtenerColegio, AltaColegio, SuspenderColegio, ObtenerColegios,DetalleColegio, BorrarColegio,EditarColegio}
+export {ObtenerColegio, AltaColegio, SuspenderColegio, ObtenerColegios,DetalleColegio, BorrarColegio,EditarColegio,VerColegio}

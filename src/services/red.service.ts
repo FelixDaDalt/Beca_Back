@@ -1,5 +1,5 @@
 import { colegio } from "../models/colegio"
-import { Op, Sequelize, Transaction } from "sequelize";
+import { Op, Sequelize, Transaction, where } from "sequelize";
 import { red } from "../models/red";
 import { red_colegio } from "../models/red_colegio";
 import { beca } from "../models/beca";
@@ -102,21 +102,43 @@ const listadoRedes = async (idColegio?: string) => {
         include: [includeRedColegio]
       });
   
-      const redes = listado.map((redItem) => {
-        const { red_colegios, ...resto } = redItem.toJSON() as any;
+      // 🔥 ACA: Hacemos Promise.all para esperar todos los mapas async
+      const redes = await Promise.all(
+        listado.map(async (redItem) => {
+          const { red_colegios, ...resto } = redItem.toJSON() as any;
   
-        const anfitrionColegio = red_colegios?.find((rc: any) => rc.anfitrion)?.id_colegio_colegio || null;
+          let anfitrionColegio = null;
   
-        const esAnfitrion = idColegio
-          ? red_colegios?.some((rc: any) => rc.id_colegio == idColegio && rc.anfitrion === true)
-          : false;
+          const esAnfitrion = idColegio
+            ? red_colegios?.some((rc: any) => rc.id_colegio == idColegio && rc.anfitrion === true)
+            : false;
   
-        return {
-          ...resto,
-          Anfitrion: anfitrionColegio,
-          esAnfitrion,
-        };
-      });
+          // 👉 Si NO soy anfitrión, busco al anfitrión
+          if (!esAnfitrion) {
+            const rc = await red_colegio.findOne({
+              where: {
+                id_red: redItem.id,
+                anfitrion: true,
+                borrado: 0
+              },
+              include: [{
+                model: colegio,
+                as: 'id_colegio_colegio',
+                required: true,
+                attributes: ['id', 'nombre', 'cuit']
+              }]
+            });
+  
+            anfitrionColegio = rc?.id_colegio_colegio || null;
+          }
+  
+          return {
+            ...resto,
+            Anfitrion: anfitrionColegio,
+            esAnfitrion,
+          };
+        })
+      );
   
       let misRedes: any[] = [];
       let vinculado: any[] = [];
@@ -136,6 +158,7 @@ const listadoRedes = async (idColegio?: string) => {
       throw error;
     }
   };
+  
   
 
 const borrarRed = async (idRed:string, transaction:Transaction) => {

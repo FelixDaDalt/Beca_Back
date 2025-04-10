@@ -1,5 +1,6 @@
 import * as Sequelize from 'sequelize';
 import { DataTypes, Model, Optional } from 'sequelize';
+import type { autorizados, autorizadosId } from './autorizados';
 import type { beca, becaId } from './beca';
 import type { beca_solicitud, beca_solicitudId } from './beca_solicitud';
 import type { notificaciones, notificacionesId } from './notificaciones';
@@ -46,6 +47,18 @@ export class colegio extends Model<colegioAttributes, colegioCreationAttributes>
   borrado?: number;
   foto?: string;
 
+  // colegio hasMany autorizados via id_colegio
+  autorizados!: autorizados[];
+  getAutorizados!: Sequelize.HasManyGetAssociationsMixin<autorizados>;
+  setAutorizados!: Sequelize.HasManySetAssociationsMixin<autorizados, autorizadosId>;
+  addAutorizado!: Sequelize.HasManyAddAssociationMixin<autorizados, autorizadosId>;
+  addAutorizados!: Sequelize.HasManyAddAssociationsMixin<autorizados, autorizadosId>;
+  createAutorizado!: Sequelize.HasManyCreateAssociationMixin<autorizados>;
+  removeAutorizado!: Sequelize.HasManyRemoveAssociationMixin<autorizados, autorizadosId>;
+  removeAutorizados!: Sequelize.HasManyRemoveAssociationsMixin<autorizados, autorizadosId>;
+  hasAutorizado!: Sequelize.HasManyHasAssociationMixin<autorizados, autorizadosId>;
+  hasAutorizados!: Sequelize.HasManyHasAssociationsMixin<autorizados, autorizadosId>;
+  countAutorizados!: Sequelize.HasManyCountAssociationsMixin;
   // colegio hasMany beca via id_colegio
   becas!: beca[];
   getBecas!: Sequelize.HasManyGetAssociationsMixin<beca>;
