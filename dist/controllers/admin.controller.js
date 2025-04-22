@@ -124,8 +124,9 @@ exports.Me = Me;
 //OTROS
 const Comprobar = async (req, res) => {
     try {
-        const { cuit, dni, url, dniAdmin } = req.query;
-        const comprobacion = await (0, admin_service_1.comprobarDisponibilidad)(cuit, dni, url, dniAdmin);
+        const id_colegio = req.user?.id_colegio;
+        const { cuit, dni, dniAdmin, dniAutorizado } = req.query;
+        const comprobacion = await (0, admin_service_1.comprobarDisponibilidad)(cuit, dni, dniAdmin, dniAutorizado, id_colegio);
         res.status(200).send(comprobacion);
     }
     catch (e) {

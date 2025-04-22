@@ -51,19 +51,10 @@ class colegio extends sequelize_1.Model {
                 type: sequelize_1.DataTypes.STRING(18),
                 allowNull: false
             },
-            url: {
-                type: sequelize_1.DataTypes.STRING(255),
-                allowNull: false
-            },
             email: {
                 type: sequelize_1.DataTypes.STRING(255),
                 allowNull: true,
                 defaultValue: "No Definido"
-            },
-            terminos: {
-                type: sequelize_1.DataTypes.BOOLEAN,
-                allowNull: true,
-                defaultValue: 0
             },
             suspendido: {
                 type: sequelize_1.DataTypes.BOOLEAN,
@@ -79,6 +70,24 @@ class colegio extends sequelize_1.Model {
                 type: sequelize_1.DataTypes.STRING(255),
                 allowNull: true,
                 defaultValue: "\/uploads\/colegio\/default.png"
+            },
+            id_plan: {
+                type: sequelize_1.DataTypes.INTEGER,
+                allowNull: false,
+                defaultValue: -1,
+                references: {
+                    model: 'plan',
+                    key: 'id'
+                }
+            },
+            id_forma_pago: {
+                type: sequelize_1.DataTypes.INTEGER,
+                allowNull: false,
+                defaultValue: -1,
+                references: {
+                    model: 'forma_pago',
+                    key: 'id'
+                }
             }
         }, {
             sequelize,
@@ -98,6 +107,20 @@ class colegio extends sequelize_1.Model {
                     using: "BTREE",
                     fields: [
                         { name: "id_zona" },
+                    ]
+                },
+                {
+                    name: "fk_colegio_plan",
+                    using: "BTREE",
+                    fields: [
+                        { name: "id_plan" },
+                    ]
+                },
+                {
+                    name: "fk_colegio_forma_pago",
+                    using: "BTREE",
+                    fields: [
+                        { name: "id_forma_pago" },
                     ]
                 },
             ]

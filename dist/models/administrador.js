@@ -70,7 +70,12 @@ class administrador extends sequelize_1.Model {
                 type: sequelize_1.DataTypes.STRING(255),
                 allowNull: false,
                 defaultValue: "No Definido"
-            }
+            },
+            superAdmin: {
+                type: sequelize_1.DataTypes.BOOLEAN,
+                allowNull: true,
+                defaultValue: 0
+            },
         }, {
             sequelize,
             tableName: 'administrador',

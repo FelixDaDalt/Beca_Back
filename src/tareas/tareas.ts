@@ -875,16 +875,31 @@ export async function obtenerParametro(clave: string): Promise<string | null> {
 
 //// Tareas programadas /////
 /////// Todos los dias a las 00:01
-cron.schedule('40 20 * * *', async () => { 
+cron.schedule('1 0 * * *', async () => { 
   await ejecutarBajaAutomaticaSiCorresponde(),
   await ejecutarNotificacionPorVencerSiCorresponde();
   await ejecutarNotificacionVencidaSiCorresponde()
 },{
   timezone: "America/Argentina/Buenos_Aires"
 });
+/////// Todos los dias a las 18:00PM
+cron.schedule('0 6 * * *', async () => { 
+  await ejecutarNotificacionPorVencerSiCorresponde();
+  await ejecutarNotificacionVencidaSiCorresponde()
+},{
+  timezone: "America/Argentina/Buenos_Aires"
+})
 
 /////// Todos los dias a las 12:00PM
 cron.schedule('0 12 * * *', async () => { 
+  await ejecutarNotificacionPorVencerSiCorresponde();
+  await ejecutarNotificacionVencidaSiCorresponde()
+},{
+  timezone: "America/Argentina/Buenos_Aires"
+})
+
+/////// Todos los dias a las 18:00PM
+cron.schedule('0 18 * * *', async () => { 
   await ejecutarNotificacionPorVencerSiCorresponde();
   await ejecutarNotificacionVencidaSiCorresponde()
 },{

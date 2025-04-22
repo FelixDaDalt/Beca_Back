@@ -14,5 +14,5 @@ router.post('/nuevaZona', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles
 router.post('/nuevaLocalidad', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([0]), zona_controller_1.NuevaLocalidad);
 router.put('/borrarZona', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([0]), zona_controller_1.BorrarZona);
 router.put('/borrarLocalidad', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([0]), zona_controller_1.BorrarLocalidad);
-router.put('/actualizarZona', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([0]), zona_controller_1.ActualizarLocalidad);
-router.put('/actualizarLocalidad', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([0]), zona_controller_1.ActualizarZona);
+router.put('/actualizarZona', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([0]), zona_controller_1.ActualizarZona);
+router.put('/actualizarLocalidad', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([0]), zona_controller_1.ActualizarLocalidad);

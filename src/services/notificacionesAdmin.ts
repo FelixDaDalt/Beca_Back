@@ -64,7 +64,7 @@ const obtenerNotificacionesAdmin = async () => {
         },
         proximo:{
           proxima:calcularProximaEjecucion(),
-          proximaPendiente:`Faltan ${await diasHastaProximaBaja()} días para la próxima ejecución de baja.`
+          proximaPendiente:`Faltan ${await diasHastaProximaBaja()} días para la ejecución.`
         }
         };
     }
@@ -78,22 +78,28 @@ const obtenerNotificacionesAdmin = async () => {
 function calcularProximaEjecucion(): string {
   const ahora = new Date();
 
-  // Crear hoy a las 00:01
-  const hoy001 = new Date();
-  hoy001.setHours(0, 1, 0, 0);
+  const horarios = [
+    { h: 0, m: 1 },
+    { h: 6, m: 0 },
+    { h: 12, m: 0 },
+    { h: 18, m: 0 }
+  ];
 
-  // Crear hoy a las 12:00
-  const hoy1200 = new Date();
-  hoy1200.setHours(12, 0, 0, 0);
+  // Buscar la próxima ejecución
+  let proxima: Date | null = null;
 
-  let proxima: Date;
+  for (const horario of horarios) {
+    const posible = new Date();
+    posible.setHours(horario.h, horario.m, 0, 0);
 
-  if (ahora < hoy001) {
-    proxima = hoy001;
-  } else if (ahora < hoy1200) {
-    proxima = hoy1200;
-  } else {
-    // Mañana a las 00:01
+    if (ahora < posible) {
+      proxima = posible;
+      break;
+    }
+  }
+
+  // Si ya pasaron todas hoy, usar la de mañana a las 00:01
+  if (!proxima) {
     proxima = new Date();
     proxima.setDate(proxima.getDate() + 1);
     proxima.setHours(0, 1, 0, 0);
@@ -105,7 +111,7 @@ function calcularProximaEjecucion(): string {
   const horas = Math.floor(minutosTotales / 60);
   const minutos = minutosTotales % 60;
 
-  return `Próxima ejecución en ${horas}h ${minutos}min`;
+  return `Próxima ejecución en ${horas}h ${minutos}min (${proxima.toLocaleTimeString()})`;
 }
 
 

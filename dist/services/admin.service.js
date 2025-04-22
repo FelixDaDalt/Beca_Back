@@ -8,6 +8,7 @@ const usuario_1 = require("../models/usuario");
 const tyc_1 = require("../models/tyc");
 const sequelize_1 = require("sequelize");
 const roles_1 = require("../models/roles");
+const autorizados_1 = require("../models/autorizados");
 const altaAdministrador = async (nuevoAdmin, transaction) => {
     try {
         // 1. Verificar si el usuario existe por DNI
@@ -204,7 +205,7 @@ const me = async (idUsuario) => {
     }
 };
 exports.me = me;
-const comprobarDisponibilidad = async (cuit, dni, url, dniAdmin) => {
+const comprobarDisponibilidad = async (cuit, dni, dniAdmin, dniAutorizado, idColegio) => {
     try {
         let resultado = { disponible: false };
         if (cuit) {
@@ -217,15 +218,21 @@ const comprobarDisponibilidad = async (cuit, dni, url, dniAdmin) => {
             resultado.disponible = !findDni; // Si no existe, es disponible
             return resultado;
         }
-        if (url) {
-            const findUrl = await colegio_1.colegio.findOne({ where: { url } });
-            resultado.disponible = !findUrl; // Si no existe, es disponible
-            return resultado;
-        }
         if (dniAdmin) {
             const dni = dniAdmin;
             const findDniAdmin = await administrador_1.administrador.findOne({ where: { dni, borrado: 0 } });
             resultado.disponible = !findDniAdmin; // Si no existe, es disponible
+            return resultado;
+        }
+        if (dniAutorizado) {
+            if (!idColegio) {
+                const error = new Error('Debe proporcionar el colegio');
+                error.statusCode = 400;
+                throw error;
+            }
+            const dni = dniAutorizado;
+            const findDniAutorizado = await autorizados_1.autorizados.findOne({ where: { dni: dni, id_colegio: idColegio, borrado: 0 } });
+            resultado.disponible = !findDniAutorizado; // Si no existe, es disponible
             return resultado;
         }
         const error = new Error('Se debe proporcionar CUIT, DNI o URL para comprobar la disponibilidad.');

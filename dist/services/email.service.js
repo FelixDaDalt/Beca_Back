@@ -24,7 +24,7 @@ async function enviarCorreo(to, subject, text, html) {
     try {
         const mensajeAdicional = "\n\nVisitar: https://rib.tecnohilet.com.ar/ para más información.\nNo responder a este correo.";
         const info = await transporter.sendMail({
-            from: '"Rib Notificacion" <rib.notificacion@gmail.com>', // Nombre y correo del remitente
+            from: '"RIB Notificacion" <rib.notificacion@gmail.com>', // Nombre y correo del remitente
             to, // Correo del destinatario
             subject, // Asunto
             text: text + mensajeAdicional, // Agregar mensaje adicional al texto plano

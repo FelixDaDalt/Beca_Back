@@ -226,6 +226,16 @@ const listadoColegios = async (idRol:number) => {
                 model: plan,
                 as: 'id_plan_plan',
                 required: false,
+              },
+              {
+                model:zona_localidad,
+                as:'id_zona_zona_localidad',
+                required:false,
+                include:[{
+                    model:zona,
+                    as:'id_zona_zona',
+                    required:false,
+                }]
               }
             );
           }

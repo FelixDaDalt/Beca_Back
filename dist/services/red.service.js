@@ -53,46 +53,63 @@ const altaRed = async (altaRed, transaction) => {
 exports.altaRed = altaRed;
 const listadoRedes = async (idColegio) => {
     try {
-        const whereCondition = idColegio ? { id_colegio: idColegio, borrado: 0 } : { borrado: 0 }; // Solo agregar si existe idColegio
+        const includeRedColegio = {
+            model: red_colegio_1.red_colegio,
+            as: 'red_colegios',
+            required: !!idColegio,
+            attributes: ['id_colegio', 'id_red', 'anfitrion'],
+            include: [
+                {
+                    model: colegio_1.colegio,
+                    as: 'id_colegio_colegio',
+                    attributes: ['id', 'nombre', 'cuit']
+                }
+            ]
+        };
+        if (idColegio) {
+            includeRedColegio.where = {
+                id_colegio: idColegio,
+                borrado: 0
+            };
+        }
         const listado = await red_1.red.findAll({
             where: { borrado: 0 },
             attributes: { exclude: ['borrado'] },
-            include: [
-                {
-                    model: red_colegio_1.red_colegio,
-                    as: 'red_colegios',
-                    required: !!idColegio,
-                    where: whereCondition,
-                    attributes: ['id_colegio', 'id_red', 'anfitrion'],
-                    include: [
-                        {
+            include: [includeRedColegio]
+        });
+        // 🔥 ACA: Hacemos Promise.all para esperar todos los mapas async
+        const redes = await Promise.all(listado.map(async (redItem) => {
+            const { red_colegios, ...resto } = redItem.toJSON();
+            let anfitrionColegio = null;
+            const esAnfitrion = idColegio
+                ? red_colegios?.some((rc) => rc.id_colegio == idColegio && rc.anfitrion === true)
+                : false;
+            // 👉 Si NO soy anfitrión, busco al anfitrión
+            if (!esAnfitrion) {
+                const rc = await red_colegio_1.red_colegio.findOne({
+                    where: {
+                        id_red: redItem.id,
+                        anfitrion: true,
+                        borrado: 0
+                    },
+                    include: [{
                             model: colegio_1.colegio,
                             as: 'id_colegio_colegio',
+                            required: true,
                             attributes: ['id', 'nombre', 'cuit']
-                        }
-                    ]
-                }
-            ]
-        });
-        const redes = listado.map((redItem) => {
-            const { red_colegios, ...resto } = redItem.toJSON();
-            // Buscar el colegio anfitrión (siempre devolver el objeto `id_colegio_colegio` del registro con `anfitrion: true`)
-            const anfitrionColegio = red_colegios.find((rc) => rc.anfitrion === true)?.id_colegio_colegio || null;
-            // Verificar si el idColegio proporcionado es anfitrión
-            const esAnfitrion = idColegio
-                ? red_colegios.some((rc) => rc.id_colegio === idColegio && rc.anfitrion === true)
-                : false;
+                        }]
+                });
+                anfitrionColegio = rc?.id_colegio_colegio || null;
+            }
             return {
                 ...resto,
                 Anfitrion: anfitrionColegio,
                 esAnfitrion,
             };
-        });
-        // Inicializar las categorías
+        }));
         let misRedes = [];
         let vinculado = [];
         if (idColegio) {
-            // Filtrar categorías solo si se pasa un idColegio
             misRedes = redes.filter((red) => red.esAnfitrion);
             vinculado = redes.filter((red) => !red.esAnfitrion);
         }
@@ -419,19 +436,23 @@ exports.editarMiembrosRed = editarMiembrosRed;
 const obtenerMiembros = async (idRed, rol) => {
     try {
         const whereBorrado = rol == 0 ? { id_red: idRed } : { id_red: idRed, borrado: 0 };
-        const miembrosEcnontrados = await red_colegio_1.red_colegio.findAll({
+        const miembrosEncontrados = await red_colegio_1.red_colegio.findAll({
             where: whereBorrado,
-            include: [{
+            include: [
+                {
                     model: colegio_1.colegio,
-                    as: 'id_colegio_colegio', // Asegúrate de que esta relación esté configurada
+                    as: 'id_colegio_colegio',
                     required: false
-                }],
+                }
+            ],
             order: [
                 ['anfitrion', 'DESC'],
                 [{ model: colegio_1.colegio, as: 'id_colegio_colegio' }, 'nombre', 'ASC']
-            ]
+            ],
+            raw: true,
+            nest: true
         });
-        return miembrosEcnontrados;
+        return miembrosEncontrados;
     }
     catch (error) {
         throw error;

@@ -23,7 +23,7 @@ const AltaRed = async (req, res) => {
     const transaction = await database_1.default.transaction();
     try {
         const { body, file } = req;
-        const fotoUrl = file ? `/uploads/redes/${file.filename}` : null;
+        const fotoUrl = file ? `/uploads/redes/${file.filename}` : `/uploads/redes/default.png	`;
         const colegios = JSON.parse(body.colegios);
         const redConFoto = {
             red: {

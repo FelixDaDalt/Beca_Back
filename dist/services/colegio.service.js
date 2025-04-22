@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.editarColegio = exports.borrarColegio = exports.detalleColegio = exports.altaColegio = exports.listadoColegios = exports.suspenderColegio = exports.obtenerColegio = void 0;
+exports.verColegio = exports.editarColegio = exports.borrarColegio = exports.detalleColegio = exports.altaColegio = exports.listadoColegios = exports.suspenderColegio = exports.obtenerColegio = void 0;
 const usuario_1 = require("../models/usuario");
 const colegio_1 = require("../models/colegio");
 const password_handle_1 = require("../utils/password.handle");
@@ -11,6 +11,9 @@ const red_colegio_1 = require("../models/red_colegio");
 const beca_solicitud_1 = require("../models/beca_solicitud");
 const beca_1 = require("../models/beca");
 const matrices_service_1 = require("./matrices.service");
+const autorizados_1 = require("../models/autorizados");
+const forma_pago_1 = require("../models/forma_pago");
+const plan_1 = require("../models/plan");
 const obtenerColegio = async (idColegio) => {
     try {
         const colegioEncontrado = await colegio_1.colegio.findOne({
@@ -168,23 +171,46 @@ const suspenderColegio = async (idColegio, transaction) => {
     }
 };
 exports.suspenderColegio = suspenderColegio;
-const listadoColegios = async () => {
+const listadoColegios = async (idRol) => {
     try {
+        const include = [
+            {
+                model: usuario_1.usuario,
+                as: 'usuarios',
+                where: {
+                    id_rol: 1,
+                    borrado: 0
+                },
+                required: false,
+                attributes: { exclude: ['password', 'borrado', 'id_rol'] },
+            }
+        ];
+        if (idRol == 0) {
+            include.push({
+                model: forma_pago_1.forma_pago,
+                as: 'id_forma_pago_forma_pago',
+                required: false,
+            }, {
+                model: plan_1.plan,
+                as: 'id_plan_plan',
+                required: false,
+            }, {
+                model: zona_localidad_1.zona_localidad,
+                as: 'id_zona_zona_localidad',
+                required: false,
+                include: [{
+                        model: zona_1.zona,
+                        as: 'id_zona_zona',
+                        required: false,
+                    }]
+            });
+        }
         const listado = await colegio_1.colegio.findAll({
             where: {
                 borrado: 0
             },
             attributes: { exclude: ['borrado'] },
-            include: [{
-                    model: usuario_1.usuario,
-                    as: 'usuarios',
-                    where: {
-                        id_rol: 1,
-                        borrado: 0
-                    },
-                    required: false,
-                    attributes: { exclude: ['password', 'borrado', 'id_rol'] },
-                }]
+            include: include
         });
         return listado;
     }
@@ -234,6 +260,12 @@ const detalleColegio = async (idColegio) => {
                         }
                     ],
                     required: false
+                },
+                {
+                    model: autorizados_1.autorizados,
+                    as: 'autorizados',
+                    where: { borrado: 0, id_colegio: idColegio },
+                    required: false,
                 }
             ]
         });
@@ -246,12 +278,6 @@ const detalleColegio = async (idColegio) => {
         const usuarios = colegioExistente.usuarios.reduce((acc, user) => {
             if (user.id_rol === 1) {
                 acc.responsables.push(user);
-            }
-            else if (user.id_rol === 2) {
-                acc.delegados.push(user);
-            }
-            else if (user.id_rol === 3) {
-                acc.autorizados.push(user);
             }
             return acc;
         }, { responsables: [], delegados: [], autorizados: [] });
@@ -273,6 +299,7 @@ const detalleColegio = async (idColegio) => {
         return {
             colegio: colegioSinUsuarios,
             usuarios: usuarios,
+            autorizados: colegioExistente.autorizados,
             anfitrion: redesAnfitrion, // Redes donde el colegio es anfitrión
             miembro: redesMiembro // Redes donde el colegio es solo miembro
         };
@@ -282,6 +309,83 @@ const detalleColegio = async (idColegio) => {
     }
 };
 exports.detalleColegio = detalleColegio;
+const verColegio = async (idColegio) => {
+    try {
+        const colegioExistente = await colegio_1.colegio.findOne({
+            where: {
+                id: idColegio,
+                borrado: 0,
+            },
+            attributes: { exclude: ['borrado', 'suspendido'] },
+            include: [
+                {
+                    model: usuario_1.usuario,
+                    as: 'usuarios',
+                    where: { borrado: 0 },
+                    attributes: ['id', 'dni', 'nombre', 'apellido', 'foto', 'id_colegio'],
+                    required: false
+                },
+                {
+                    model: zona_localidad_1.zona_localidad,
+                    as: 'id_zona_zona_localidad',
+                    required: false,
+                    attributes: { exclude: ['borrado'] },
+                    include: [{
+                            model: zona_1.zona,
+                            as: 'id_zona_zona',
+                            required: false,
+                            attributes: { exclude: ['borrado'] }
+                        }]
+                },
+                {
+                    model: red_colegio_1.red_colegio, // Incluir la tabla intermedia 'red_colegio'
+                    as: 'red_colegios', // Alias para las redes
+                    where: { id_colegio: idColegio, borrado: 0 }, // Filtrar por el colegio
+                    attributes: ['id_red'],
+                    include: [
+                        {
+                            model: red_1.red, // Incluir el modelo de redes
+                            as: 'id_red_red', // Alias para la red
+                            where: { borrado: 0 },
+                            attributes: ['id', 'nombre', 'porcentaje', 'foto', 'caracteristicas'], // Incluir datos relevantes de la red
+                        }
+                    ],
+                    required: false
+                }
+            ]
+        });
+        if (!colegioExistente) {
+            const error = new Error('No se encontró el colegio');
+            error.statusCode = 409;
+            throw error;
+        }
+        // Extraer la información de las redes desde la tabla intermedia 'red_colegio'
+        const redesRelacionadas = colegioExistente.red_colegios.map((redRel) => ({
+            red: redRel.id_red_red, // Obtener la red completa
+            anfitrion: redRel.anfitrion // Obtener si es anfitrión o no
+        }));
+        // Filtrar las redes donde el colegio es anfitrión
+        const redesAnfitrion = redesRelacionadas
+            .filter((rc) => rc.anfitrion === true)
+            .map((rc) => rc.red); // Extraer solo la información de la red
+        // Filtrar las redes donde el colegio es solo miembro
+        const redesMiembro = redesRelacionadas
+            .filter((rc) => rc.anfitrion === false)
+            .map((rc) => rc.red); // Extraer solo la información de la red
+        // Estructura de respuesta
+        const { usuarios: _, redes: __, ...colegioSinUsuarios } = colegioExistente.toJSON();
+        return {
+            colegio: colegioSinUsuarios,
+            responsables: colegioExistente.usuarios,
+            anfitrion: redesAnfitrion, // Redes donde el colegio es anfitrión
+            miembro: redesMiembro // Redes donde el colegio es solo miembro
+        };
+    }
+    catch (error) {
+        throw error;
+    }
+};
+exports.verColegio = verColegio;
 const borrarColegio = async (idColegio, idUsuario, transaction) => {
     try {
         const colegioExistente = await colegio_1.colegio.findOne({

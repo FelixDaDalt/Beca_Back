@@ -86,7 +86,6 @@ const obtenerAutorizado = async (idAutorizado:string) => {
 
 const editarAutorizado = async (update:autorizados, idUsuario:number, idRol:number, transaction:Transaction, idColegio?:number) => {
     try {
-        console.log(update)
         if(idRol > 1 && update.id != idUsuario){
             const error = new Error('No puedes editar otro usuario');
             (error as any).statusCode = 400; 

@@ -11,6 +11,7 @@ export interface RequestExt extends Request {
         fecha_ingreso: string;
         dni: string;
         id_colegio:string | null;
+        superAdmin:number | null
     } | JwtPayload;
 }
 

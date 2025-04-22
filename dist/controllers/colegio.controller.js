@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.EditarColegio = exports.BorrarColegio = exports.DetalleColegio = exports.ObtenerColegios = exports.SuspenderColegio = exports.AltaColegio = exports.ObtenerColegio = void 0;
+exports.VerColegio = exports.EditarColegio = exports.BorrarColegio = exports.DetalleColegio = exports.ObtenerColegios = exports.SuspenderColegio = exports.AltaColegio = exports.ObtenerColegio = void 0;
 const error_handle_1 = require("../utils/error.handle");
 const colegio_service_1 = require("../services/colegio.service");
 const database_1 = __importDefault(require("../config/database"));
@@ -23,7 +23,7 @@ const AltaColegio = async (req, res) => {
     const transaction = await database_1.default.transaction();
     try {
         const { body, file } = req;
-        const fotoUrl = file ? `/uploads/colegio/${file.filename}` : body.foto;
+        const fotoUrl = file ? `/uploads/colegio/${file.filename}` : `/uploads/colegio/default.png`;
         const colegioConFoto = {
             colegio: {
                 ...body.colegio,
@@ -72,7 +72,8 @@ const EditarColegio = async (req, res) => {
 exports.EditarColegio = EditarColegio;
 const ObtenerColegios = async (req, res) => {
     try {
-        const listado = await (0, colegio_service_1.listadoColegios)();
+        const idRol = req.user?.id_rol;
+        const listado = await (0, colegio_service_1.listadoColegios)(idRol);
         const data = { "data": listado, "mensaje": "Listado de colegios obtenidos" };
         res.status(200).send(data);
     }
@@ -117,6 +118,18 @@ const DetalleColegio = async (req, res) => {
     }
 };
 exports.DetalleColegio = DetalleColegio;
+const VerColegio = async (req, res) => {
+    try {
+        let idColegio = req.query.id;
+        const detalle = await (0, colegio_service_1.verColegio)(idColegio);
+        const data = { "data": detalle, "mensaje": "Detalle del colegio" };
+        res.status(200).send(data);
+    }
+    catch (e) {
+        (0, error_handle_1.handleHttp)(res, 'Error al obtener el Detalle del colegio', e);
+    }
+};
+exports.VerColegio = VerColegio;
 const BorrarColegio = async (req, res) => {
     const transaction = await database_1.default.transaction();
     try {

@@ -59,8 +59,11 @@ const login = async (login, tipo, ip, navegador) => {
         const id_colegio = tipo === 'usuario' && 'id_colegio' in usuarioExistente
             ? usuarioExistente.id_colegio
             : null;
+        const superAdmin = tipo === 'administrador' && 'superAdmin' in usuarioExistente
+            ? usuarioExistente.superAdmin
+            : null;
         // 4. Generar el token JWT
-        const token = await (0, jw_handle_1.generarToken)(usuarioExistente.id, usuarioExistente.id_rol, usuarioExistente.dni, id_colegio);
+        const token = await (0, jw_handle_1.generarToken)(usuarioExistente.id, usuarioExistente.id_rol, usuarioExistente.dni, id_colegio, superAdmin);
         // 6. Excluir datos sensibles y retornar el token y los datos
         const { password, borrado, ...usuarioLogueado } = usuarioExistente.dataValues;
         return {

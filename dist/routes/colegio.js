@@ -14,6 +14,7 @@ exports.router = router;
 //Obtener
 router.get('/obtener', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([0, 1]), colegio_controller_1.ObtenerColegio);
 router.get('/detalle', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([0, 1, 2, 3]), colegio_controller_1.DetalleColegio);
+router.get('/ver-colegio', session_1.comprobarJWT, colegio_controller_1.VerColegio);
 router.post('/alta', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([0]), colegio_upload_1.default.single('foto'), colegio_controller_1.AltaColegio);
 router.get('/listado', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([0, 1]), colegio_controller_1.ObtenerColegios);
 router.put('/suspender', session_1.comprobarJWT, (0, roles_mid_1.verificarRoles)([0]), colegio_controller_1.SuspenderColegio);

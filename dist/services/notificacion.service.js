@@ -1,13 +1,15 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.notificaciones = void 0;
+exports.obtenerNotificaciones = void 0;
 const beca_1 = require("../models/beca");
+const sequelize_1 = require("sequelize");
 const beca_solicitud_1 = require("../models/beca_solicitud");
 const colegio_1 = require("../models/colegio");
-const notificaciones = async (idUsuario, idRol, idColegio, transaction) => {
+const notificaciones_1 = require("../models/notificaciones");
+const obtenerNotificaciones = async (idUsuario, idRol, idColegio) => {
     try {
-        let solicitudes = []; // Inicializa solicitudes como un array vacío
-        if (idRol == 0) {
+        // Si el rol es 0, no tiene notificaciones
+        if (idRol === 0) {
             return {
                 solicitudesSinLeer: 0,
                 misSolicitudesSinLeer: 0,
@@ -16,74 +18,76 @@ const notificaciones = async (idUsuario, idRol, idColegio, transaction) => {
                 misSolicitudes: []
             };
         }
-        // Si el rol es mayor a 2, ejecuta la consulta de solicitudes
-        if (idRol <= 2) {
-            solicitudes = await beca_solicitud_1.beca_solicitud.findAll({
-                where: {
-                    sinLeer: 1
-                },
-                include: [{
-                        model: beca_1.beca,
-                        as: 'id_beca_beca',
-                        where: {
-                            id_colegio: idColegio
-                        },
-                        required: true
-                    }, {
-                        model: colegio_1.colegio,
-                        as: 'id_colegio_solic_colegio',
-                        required: true
-                    }],
-                transaction
-            });
-        }
-        // Ajusta la consulta de misSolicitudes según el rol
-        const misSolicitudes = await beca_solicitud_1.beca_solicitud.findAll({
+        // 🚀 Consultar notificaciones donde el colegio sea oferente o solicitante
+        let notificacionesDB = await notificaciones_1.notificaciones.findAll({
             where: {
-                sinLeerSolicitante: 1,
-                ...(idRol > 2 ? { id_usuario_solic: idUsuario } : { id_colegio_solic: idColegio }) // Cambia el filtro según el rol
+                [sequelize_1.Op.or]: [
+                    { id_colegio_ofer: idColegio, leido_ofer: 0 },
+                    { id_colegio_solic: idColegio, leido_solic: 0 }
+                ]
             },
-            include: [{
-                    model: beca_1.beca,
-                    as: 'id_beca_beca',
-                    required: true,
+            include: [
+                {
+                    model: beca_solicitud_1.beca_solicitud,
+                    as: 'id_solicitud_beca_solicitud',
                     include: [{
-                            model: colegio_1.colegio,
-                            as: 'id_colegio_colegio',
-                            required: true
+                            model: beca_1.beca,
+                            as: 'id_beca_beca'
                         }]
-                }],
-            transaction
+                },
+                {
+                    model: colegio_1.colegio,
+                    as: 'id_colegio_ofer_colegio'
+                },
+                {
+                    model: colegio_1.colegio,
+                    as: 'id_colegio_solic_colegio'
+                }
+            ],
+            order: [['fecha', 'DESC']] // 👈🚀 acá ordenamos por fecha descendente
         });
-        const solicitudesMapeadas = solicitudes.map(s => ({
-            vencida: s.id_estado == 4,
-            desestimado: s.id_estado == 1,
-            id: s.id,
-            id_red: s.id_beca_beca?.id_red,
-            nombre: s.id_colegio_solic_colegio?.nombre,
-            fecha_hora: s.id_estado == 1 ? s.reso_fecha_hora : s.fecha_hora,
-            foto: s.id_colegio_solic_colegio?.foto
+        // 🔄 Mapear solicitudes
+        const solicitudesMapeadas = notificacionesDB
+            .filter(n => n.id_colegio_ofer === Number(idColegio))
+            .map(n => ({
+            id: n.id_solicitud,
+            colegio: n.id_colegio_solic_colegio.nombre,
+            foto: n.id_colegio_solic_colegio.foto,
+            id_red: n.id_solicitud_beca_solicitud.id_beca_beca.id_red,
+            vencida: n.vencida,
+            porVencer: n.porvencer,
+            desestimado: n.desestimada,
+            porBaja: n.porbaja,
+            dadaDeBaja: n.dadabaja,
+            fecha: n.fecha
         }));
-        const misSolicitudesMapeadas = misSolicitudes.map(ms => ({
-            id: ms.id,
-            id_red: ms.id_beca_beca?.id_red,
-            nombre: ms.id_beca_beca?.id_colegio_colegio?.nombre,
-            reso_fecha_hora: ms.reso_fecha_hora,
-            foto: ms.id_beca_beca?.id_colegio_colegio?.foto,
-            vencida: ms.id_estado == 4,
+        // 🔄 Mapear mis solicitudes
+        const misSolicitudesMapeadas = notificacionesDB
+            .filter(n => n.id_colegio_solic === Number(idColegio))
+            .map(n => ({
+            id: n.id_solicitud,
+            colegio: n.id_colegio_ofer_colegio.nombre,
+            foto: n.id_colegio_ofer_colegio.foto,
+            id_red: n.id_solicitud_beca_solicitud.id_beca_beca.id_red,
+            vencida: n.vencida,
+            porVencer: n.porvencer,
+            desestimado: n.desestimada,
+            porBaja: n.porbaja,
+            dadaDeBaja: n.dadabaja,
+            fecha: n.fecha
         }));
-        const notificaciones = {
+        // 📌 Estructura final de la respuesta
+        return {
             solicitudesSinLeer: solicitudesMapeadas.length,
             misSolicitudesSinLeer: misSolicitudesMapeadas.length,
             total: solicitudesMapeadas.length + misSolicitudesMapeadas.length,
             solicitudes: solicitudesMapeadas,
             misSolicitudes: misSolicitudesMapeadas
         };
-        return notificaciones;
     }
     catch (error) {
-        console.error("Error en la función notificaciones:", error);
+        console.error("⚠️ Error en obtenerNotificaciones:", error);
         throw error;
     }
 };
-exports.notificaciones = notificaciones;
+exports.obtenerNotificaciones = obtenerNotificaciones;

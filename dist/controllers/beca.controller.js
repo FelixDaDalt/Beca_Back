@@ -235,19 +235,27 @@ const DarDeBajaSolicitud = async (req, res) => {
         //req.body : id_solicitud, id_resolucion, res_comentario
         const solicitudDesestimada = await (0, beca_service_1.darBajaSolicitud)(req.body, idRed, idUsuario, idColegio, idRol, transaction);
         const data = { "data": solicitudDesestimada,
-            "mensaje": "Beca dada de Baja",
+            "mensaje": "Solicitu de Baja",
             "log": `/ Solicitud(id):${solicitudDesestimada.solicitud.id}`,
             "idColegio": `${idColegio}` };
         await transaction.commit();
-        if (solicitudDesestimada.emailDestino)
-            try {
-                await (0, email_service_1.enviarCorreo)(solicitudDesestimada.emailDestino, "Beca dada de baja", `El colegio ${solicitudDesestimada.colegio} ha solicitado la baja de tu beca.`, `<h1>Beca dada de baja</h1>
-                    <p>El colegio ${solicitudDesestimada.colegio} ha solicitado la baja de tu beca.</p>`);
-            }
-            catch (emailError) {
-                console.error("⚠️ Error al enviar el correo:", emailError);
-                // No lanzamos error aquí para que la solicitud no se vea afectada por problemas en el correo
-            }
+        try {
+            if (solicitudDesestimada.colegioAInformar.email)
+                // Enviar correo a colegioAInformar
+                await (0, email_service_1.enviarCorreo)(solicitudDesestimada.colegioAInformar.email, "Solicitud de baja de beca", `El colegio ${solicitudDesestimada.colegioQueSolicito.nombre} ha solicitado la baja de la beca.`, `<h1>Solicitud de baja de beca</h1>
+                 <p>El colegio <strong>${solicitudDesestimada.colegioQueSolicito.nombre}</strong> 
+                 ha solicitado la baja de la beca.</p> 
+                 <p>La misma se efectivizará en diciembre de este año.</p>`);
+            if (solicitudDesestimada.colegioQueSolicito.email)
+                await (0, email_service_1.enviarCorreo)(solicitudDesestimada.colegioQueSolicito.email, "Confirmación de solicitud de baja", `Has solicitado la baja de la beca del colegio ${solicitudDesestimada.colegioAInformar.nombre}.`, `<h1>Solicitud de baja confirmada</h1>
+                 <p>Has solicitado la baja de la beca del colegio 
+                 <strong>${solicitudDesestimada.colegioAInformar.nombre}</strong>.</p> 
+                 <p>La misma se efectivizará en diciembre de este año.</p>`);
+        }
+        catch (emailError) {
+            console.error("⚠️ Error al enviar el correo:", emailError);
+            // No lanzamos error aquí para que la solicitud no se vea afectada por problemas en el correo
+        }
         res.status(200).send(data);
     }
     catch (e) {

@@ -154,11 +154,16 @@ class beca_solicitud extends sequelize_1.Model {
                     key: 'id'
                 }
             },
-            notificacionVencimiento: {
+            notificarPorVencer: {
                 type: sequelize_1.DataTypes.BOOLEAN,
                 allowNull: true,
                 defaultValue: 0
             },
+            notificarVencida: {
+                type: sequelize_1.DataTypes.BOOLEAN,
+                allowNull: true,
+                defaultValue: 0
+            }
         }, {
             sequelize,
             tableName: 'beca_solicitud',

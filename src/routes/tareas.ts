@@ -1,18 +1,19 @@
 
 import { Router } from "express"; 
 import { comprobarJWT } from "../middleware/session";
-import { verificarRoles } from "../middleware/roles.mid";
 import { ComprobarRed, ObtenerEjecuciones, ProcesarBajas, ProcesarPorVencer, ProcesarVencidas, SincronizarRed } from "../controllers/tareas";
+import { superAdminRol } from "../middleware/superAdmin.mid";
+import { verificarRoles } from "../middleware/roles.mid";
 
 const router = Router()
 
 
 //ADMIN
-router.post('/forzar-baja',comprobarJWT,verificarRoles([0]), ProcesarBajas);
-router.post('/notificar-porVencer',comprobarJWT,verificarRoles([0]),ProcesarPorVencer);
-router.post('/notificar-Vencidas',comprobarJWT,verificarRoles([0]), ProcesarVencidas);
+router.post('/forzar-baja',comprobarJWT,superAdminRol(), ProcesarBajas);
+router.post('/notificar-porVencer',comprobarJWT,superAdminRol(),ProcesarPorVencer);
+router.post('/notificar-Vencidas',comprobarJWT,superAdminRol(), ProcesarVencidas);
 router.get('/obtener-ejecuciones',comprobarJWT,verificarRoles([0]), ObtenerEjecuciones);
-router.get('/comprobar-red',comprobarJWT,verificarRoles([0]), ComprobarRed);
-router.get('/sincronizar-red',comprobarJWT,verificarRoles([0]), SincronizarRed);
+router.get('/comprobar-red',comprobarJWT,superAdminRol(), ComprobarRed);
+router.get('/sincronizar-red',comprobarJWT,superAdminRol(), SincronizarRed);
 
 export {router} 

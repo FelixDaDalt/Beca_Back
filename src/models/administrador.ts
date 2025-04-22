@@ -17,6 +17,7 @@ export interface administradorAttributes {
   borrado?: number;
   foto?: string;
   email: string;
+  superAdmin:number;
 }
 
 export type administradorPk = "id";
@@ -38,6 +39,7 @@ export class administrador extends Model<administradorAttributes, administradorC
   borrado?: number;
   foto?: string;
   email!: string;
+  superAdmin!:number;
 
   // administrador hasMany actividad_log via admin_id
   actividad_logs!: actividad_log[];
@@ -124,7 +126,12 @@ export class administrador extends Model<administradorAttributes, administradorC
       type: DataTypes.STRING(255),
       allowNull: false,
       defaultValue: "No Definido"
-    }
+    },
+    superAdmin: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+      defaultValue: 0
+    },
   }, {
     sequelize,
     tableName: 'administrador',

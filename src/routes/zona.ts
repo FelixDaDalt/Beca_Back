@@ -12,9 +12,11 @@ router.get('/obtenerZonas',comprobarJWT, ObtenerZonas);
 //ADMIN
 router.post('/nuevaZona',comprobarJWT, verificarRoles([0]), NuevaZona);
 router.post('/nuevaLocalidad',comprobarJWT, verificarRoles([0]), NuevaLocalidad);
+
 router.put('/borrarZona',comprobarJWT, verificarRoles([0]), BorrarZona);
 router.put('/borrarLocalidad',comprobarJWT, verificarRoles([0]), BorrarLocalidad);
-router.put('/actualizarZona',comprobarJWT, verificarRoles([0]), ActualizarLocalidad);
-router.put('/actualizarLocalidad',comprobarJWT, verificarRoles([0]), ActualizarZona);
+
+router.put('/actualizarZona',comprobarJWT, verificarRoles([0]), ActualizarZona);
+router.put('/actualizarLocalidad',comprobarJWT, verificarRoles([0]), ActualizarLocalidad);
 
 export {router} 

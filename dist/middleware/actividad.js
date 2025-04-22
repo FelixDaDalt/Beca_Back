@@ -1,7 +1,12 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const actividad_log_1 = require("../models/actividad_log");
+const database_1 = __importDefault(require("../config/database"));
 const registrarActividad = async (req, res, body) => {
+    const transaction = await database_1.default.transaction();
     try {
         const { method, originalUrl } = req;
         const idUsuario = req.user?.id;
@@ -39,10 +44,12 @@ const registrarActividad = async (req, res, body) => {
                 query_params: queryParams,
                 id_colegio,
                 id_rol
-            });
+            }, { transaction });
+            await transaction.commit();
         }
     }
     catch (error) {
+        await transaction.rollback();
         console.error('Error registrando actividad:', error);
     }
 };
