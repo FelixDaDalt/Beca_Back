@@ -1,7 +1,7 @@
 import { Request, Response } from "express"
 import { handleHttp } from "../utils/error.handle"
 import { RequestExt } from "../middleware/session"
-import { notificarBecasPorVencer, notificarBecasVencidas, procesarBecasDadaBaja } from "../tareas/tareas"
+import { comprobarRed, notificarBecasPorVencer, notificarBecasVencidas, procesarBecasDadaBaja, sincronizarRedColegios } from "../tareas/tareas"
 import { obtenerEjecuciones } from "../services/tareas.service"
 
 
@@ -58,5 +58,25 @@ const ObtenerEjecuciones = async (req: Request, res: Response) => {
     }
   };
 
+  const ComprobarRed = async (req:RequestExt,res:Response)=>{
+    try{ 
+        const {idRed} = req.query
+        const listado = await comprobarRed(idRed as string)
+        const data = {"data":listado,"mensaje":"Miembros encontrados"}
+        res.status(200).send(data);
+    }catch(e){
+        handleHttp(res,'Error al obtenerla los miembros',e)    
+    }
+}
 
-export {ProcesarBajas,ProcesarPorVencer,ProcesarVencidas,ObtenerEjecuciones}
+const SincronizarRed = async (req:RequestExt,res:Response)=>{
+    try{ 
+        const {idRed} = req.query 
+        const listado = await sincronizarRedColegios(idRed as string)
+        const data = {"data":listado,"mensaje":"Sincronizado Correcto"}
+        res.status(200).send(data);
+    }catch(e){
+        handleHttp(res,'Error al sincronizar',e)    
+    }
+}
+export {ProcesarBajas,ProcesarPorVencer,ProcesarVencidas,ObtenerEjecuciones, ComprobarRed,SincronizarRed}

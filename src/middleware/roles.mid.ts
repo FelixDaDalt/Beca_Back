@@ -7,7 +7,6 @@ const verificarRoles = (rolesPermitidos: number[]) => {
         try {
             const userRole = req.user?.id_rol;
 
-
             if (userRole === undefined) {
                 handleHttp(res, 'Error de autenticación', { statusCode: 401, message: 'Usuario no autenticado.' });
                 return;

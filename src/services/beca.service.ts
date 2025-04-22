@@ -926,6 +926,7 @@ const darBajaSolicitud = async (
             throw error;
         }
 
+        //BUSCO LA SOLICITUD
         const solicitud = await beca_solicitud.findOne({
             where: { id: desestimar.id_solicitud },
             include: [
@@ -949,12 +950,14 @@ const darBajaSolicitud = async (
             transaction,
         });
 
+        //SI NO LA ENCUENTRO
         if (!solicitud) {
             const error = new Error('La Solicitud no existe');
             (error as any).statusCode = 400;
             throw error;
         }
 
+        //ACTUALIZO LA SOLICITUD
         const fecha = new Date();
         await solicitud.update(
             {

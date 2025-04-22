@@ -11,6 +11,8 @@ import { beca_solicitud } from "../models/beca_solicitud";
 import { beca } from "../models/beca";
 import { BecaService } from "./matrices.service";
 import { autorizados } from "../models/autorizados";
+import { forma_pago } from "../models/forma_pago";
+import { plan } from "../models/plan";
 
 interface nuevoColegio{
     colegio:colegio
@@ -119,7 +121,7 @@ const altaColegio = async (altaColegio: nuevoColegio, transaction:Transaction) =
 };
 
 const editarColegio = async (editar: colegio, transaction:Transaction) => {
-
+    
     try {
         // 1. Verificar si el colegio existe por CUIT
         const colegioExistente = await colegio.findOne({
@@ -198,26 +200,45 @@ const suspenderColegio = async (idColegio: string, transaction:Transaction) => {
     }
 }
 
-const listadoColegios = async () => {
+const listadoColegios = async (idRol:number) => {
     try {
-        const listado = await colegio.findAll({
-            where: {
+        const include: any[] = [
+            {
+              model: usuario,
+              as: 'usuarios',
+              where: {
+                id_rol: 1,
                 borrado: 0
+              },
+              required: false,
+              attributes: { exclude: ['password', 'borrado', 'id_rol'] },
+            }
+          ];
+      
+          if (idRol == 0) {
+            include.push(
+              {
+                model: forma_pago,
+                as: 'id_forma_pago_forma_pago',
+                required: false,
+              },
+              {
+                model: plan,
+                as: 'id_plan_plan',
+                required: false,
+              }
+            );
+          }
+      
+          const listado = await colegio.findAll({
+            where: {
+              borrado: 0
             },
             attributes: { exclude: ['borrado'] },
-            include: [{
-                model: usuario,
-                as: 'usuarios',
-                where: {
-                    id_rol: 1,
-                    borrado: 0
-                },
-                required:false,
-                attributes: { exclude: ['password', 'borrado','id_rol'] },
-            }]
-        });
-
-        return listado;
+            include: include
+          });
+      
+          return listado;
     } catch (error) {
         throw error;
     }

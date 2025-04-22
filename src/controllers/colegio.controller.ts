@@ -20,7 +20,7 @@ const AltaColegio = async (req:RequestExt,res:Response)=>{
     const transaction = await sequelize.transaction(); 
     try{ 
         const { body, file } = req;
-        const fotoUrl = file ? `/uploads/colegio/${file.filename}` : body.foto;
+        const fotoUrl = file ? `/uploads/colegio/${file.filename}` : `/uploads/colegio/default.png`;
 
         const colegioConFoto = {
             colegio: {
@@ -74,7 +74,8 @@ const EditarColegio = async (req:RequestExt,res:Response)=>{
 
 const ObtenerColegios = async (req:RequestExt,res:Response)=>{
     try{ 
-        const listado = await listadoColegios()
+        const idRol = req.user?.id_rol
+        const listado = await listadoColegios(idRol)
         const data = {"data":listado,"mensaje":"Listado de colegios obtenidos"}
         res.status(200).send(data);
     }catch(e){

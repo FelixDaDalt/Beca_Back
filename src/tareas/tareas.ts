@@ -9,37 +9,36 @@ import { enviarCorreo } from '../services/email.service';
 import { beca_automatizacion_log } from '../models/beca_automatizacion_log';
 import { notificaciones } from '../models/notificaciones';
 import { beca_automatizacion_ejecucion } from '../models/beca_automatizacion_ejecucion';
+import { red } from '../models/red';
+import { parametros } from '../models/parametros';
 
 
-const diasVencimiento = 2;
-const diasNotificar = 1;
-
-const minutosVencimiento = Number(process.env.MINUTOS_VENCIMIENTO);
-const minutosNotificar = Number(process.env.MINUTOS_NOTIFICAR);
-
-// BECAS VENCIDAS Y POR VENCER
-// cron.schedule('*/1 * * * *', async () => {
-//     console.log('⏳ Ejecutando tarea programada');
-//     await notificarBecasVencidas();
-//     await notificarBecasPorVencer();
-// }, {
-//     timezone: "America/Argentina/Buenos_Aires" // Ajusta según tu zona horaria
-// });
 
 // 🎯 Becas Vencidas
 export async function notificarBecasVencidas() {
   console.log("🔎 1 - Verificando becas vencidas...");
+
+  const diasVenc = Number(await obtenerParametro('dias_venc')) || 0;
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0); 
 
   // 🚀 LECTURA SIN transacción
   const becasVencidas = await beca_solicitud.findAll({
     where: {
       id_estado: 0,
       notificarVencida: 0,
-      fecha_hora: {
-        [Op.lte]: new Date(Date.now() - minutosVencimiento * 60 * 1000)
-      }
+      [Op.and]: [
+        Sequelize.where(
+          Sequelize.fn(
+            'DATE_ADD',
+            Sequelize.col('beca_solicitud.fecha_hora'),
+            Sequelize.literal(`INTERVAL ${diasVenc} DAY`)
+          ),
+          { [Op.lt]: hoy } 
+        )
+      ]
     },
-    include: [{ model: beca, as: "id_beca_beca", attributes: ["id_colegio"] }]
+    include: [{ model: beca, as: "id_beca_beca", attributes: ["id_colegio","id_red"] }]
   });
 
   if (becasVencidas.length === 0) {
@@ -83,7 +82,7 @@ export async function notificarBecasVencidas() {
     console.log("⏳ 3 - Actualizando estados y red_colegio...");
 
     await beca_solicitud.update(
-      { id_estado: 4 },
+      { id_estado: 4, id_resolucion: 3, notificarVencida: 1},
       { where: { id: becasVencidas.map(b => b.id) }, transaction: t }
     );
 
@@ -92,7 +91,7 @@ export async function notificarBecasVencidas() {
       { where: { id_solicitud: becasVencidas.map(b => b.id) }, transaction: t }
     );
 
-    await actualizarRedColegiosSQL(becasVencidas, t);
+    await actualizarRedColegiosVencimientoSQL(becasVencidas, t);
 
     console.log("⏳ 4 - Registrando logs de becas...");
 
@@ -136,18 +135,26 @@ export async function notificarBecasVencidas() {
 }
 
 
-
 // 🎯 Becas Por Vencer
 export async function notificarBecasPorVencer() {
     console.log("🔎 1 - Verificando becas por vencer...");
-  
+    const diasVenc = Number(await obtenerParametro('dias_venc')) || 0;
+    const diasNotif = Number(await obtenerParametro('dias_notif_venc')) || 0;
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0); 
+
     const becasPorVencer = await beca_solicitud.findAll({
       where: {
         id_estado: 0,
         notificarPorVencer: 0,
         [Op.and]: [
-          Sequelize.literal(`NOW() >= DATE_ADD(beca_solicitud.fecha_hora, INTERVAL ${minutosVencimiento - minutosNotificar} MINUTE)`),
-          Sequelize.literal(`NOW() <= DATE_ADD(beca_solicitud.fecha_hora, INTERVAL ${minutosVencimiento - minutosNotificar + minutosNotificar} MINUTE)`)
+          Sequelize.where(
+            Sequelize.fn(
+              'DATE',
+              Sequelize.literal(`DATE_ADD(DATE_ADD(beca_solicitud.fecha_hora, INTERVAL ${diasVenc} DAY), INTERVAL -${diasNotif} DAY)`)
+            ),
+            { [Op.lte]: hoy }
+          )
         ]
       },
       include: [{ model: beca, as: "id_beca_beca", attributes: ["id_colegio"] }]
@@ -246,14 +253,6 @@ export async function notificarBecasPorVencer() {
 
 
 
-// BECAS DADA DE BAJAS, CADA UN AÑO
-  // "0 0 1 11 *" 1 de noviembre de cada año
-  
-// cron.schedule("*/2 * * * *", async () => {
-//     await procesarBecasDadaBaja()
-//   },{
-//     timezone: "America/Argentina/Buenos_Aires" // Ajusta según tu zona horaria
-// });
 
 export async function procesarBecasDadaBaja() {
   console.log("🔎 1 - Verificando becas pendientes de baja...");
@@ -261,7 +260,7 @@ export async function procesarBecasDadaBaja() {
   // 🚀 LECTURA SIN transacción
   const becasPendientes = await beca_solicitud.findAll({
     where: { id_estado: 3 },
-    include: [{ model: beca, as: "id_beca_beca", attributes: ["id_colegio"] }],
+    include: [{ model: beca, as: "id_beca_beca", attributes: ["id_colegio","id_red"] }],
   });
 
   if (becasPendientes.length === 0) {
@@ -307,7 +306,7 @@ export async function procesarBecasDadaBaja() {
       { where: { id_estado: 3 }, transaction: t }
     );
 
-    await actualizarRedColegiosSQL(becasPendientes, t);
+    await actualizarRedColegiosBajaSQL(becasPendientes, t);
 
     console.log("⏳ 5 - Registrando logs...");
 
@@ -385,58 +384,469 @@ export async function procesarBecasDadaBaja() {
   }
 }
 
+export async function comprobarRed(idRed?: string, debug = true) {
+  try {
+    const whereRed: any = { borrado: 0 };
+    if (idRed) whereRed.id = idRed;
 
-export async function actualizarRedColegiosSQL(becasPendientes: any[], transaction: any) {
+    const redes = await red.findAll({
+      where: whereRed,
+      attributes: ['id', 'nombre'],
+      raw: true
+    });
+
+    const resultado = await Promise.all(
+      redes.map(async (unaRed) => {
+        const miembros = await red_colegio.findAll({
+          where: { id_red: unaRed.id, borrado: 0 },
+          include: [{
+            model: colegio,
+            as: 'id_colegio_colegio',
+            attributes: ['id', 'nombre']
+          }],
+          raw: true,
+          nest: true
+        });
+
+        const colegiosConCheck = await Promise.all(
+          miembros.map(async (miembro) => {
+            const idColegio = miembro.id_colegio;
+
+            // 1. Becas publicadas (SUM de cantidad)
+            const bp_real = await beca.sum('cantidad', {
+              where: { id_colegio: idColegio, id_red: unaRed.id, borrado: 0 }
+            }) || 0;
+
+            // 2. Becas totales propias
+            const btp_real = bp_real > 0 ? bp_real + 2 : 0;
+
+            // 3. db = bp
+            const db_real = bp_real;
+
+            // 4. dbu = solicitudes activas del colegio
+            const dbu_real = await beca_solicitud.count({
+              where: {
+                id_colegio_solic: idColegio,
+                id_estado: { [Op.in]: [0, 3, 5] }
+              },
+              include: [{
+                model: beca,
+                as: 'id_beca_beca',
+                required: true,
+                where: { id_red: unaRed.id }
+              }]
+            });
+
+            // 5. dbd = db - dbu
+            const dbd_real = db_real - dbu_real;
+
+            // 6. bsp = solicitudes pendientes HACIA el colegio
+            const bsp_real = await beca_solicitud.count({
+              where: {
+                id_estado: 0
+              },
+              include: [{
+                model: beca,
+                as: 'id_beca_beca',
+                required: true,
+                where: {
+                  id_red: unaRed.id,
+                  id_colegio: idColegio
+                }
+              }]
+            });
+
+            // 7. bsa = solicitudes aprobadas HACIA el colegio
+            const bsa_real = await beca_solicitud.count({
+              where: {
+                id_estado: { [Op.in]: [3, 5] }
+              },
+              include: [{
+                model: beca,
+                as: 'id_beca_beca',
+                required: true,
+                where: {
+                  id_red: unaRed.id,
+                  id_colegio: idColegio
+                }
+              }]
+            });
+
+            // 8. bde = btp - bsa - bsp
+            const bde_real = btp_real - bsa_real - bsp_real;
+
+            // 📌 Comparación con los valores almacenados
+            const checks = {
+              checkBP: miembro.bp === bp_real,
+              checkBTP: miembro.btp === btp_real,
+              checkDB: miembro.db === db_real,
+              checkDBU: miembro.dbu === dbu_real,
+              checkDBD: miembro.dbd === dbd_real,
+              checkBSP: miembro.bsp === bsp_real,
+              checkBSA: miembro.bsa === bsa_real,
+              checkBDE: miembro.bde === bde_real,
+              checkCantidadMinima: bp_real >= dbu_real
+            };
+
+            const testCheck = Object.values(checks).every(Boolean);
+
+            if (!debug) {
+              return {
+                id: miembro.id_colegio_colegio.id,
+                nombre: miembro.id_colegio_colegio.nombre,
+                ...checks,
+                testCheck
+              };
+            } else {
+              const reales = {
+                bp: bp_real,
+                btp: btp_real,
+                db: db_real,
+                dbu: dbu_real,
+                dbd: dbd_real,
+                bsp: bsp_real,
+                bsa: bsa_real,
+                bde: bde_real,
+                cantidadminima: bp_real
+              };
+            
+              const esperados = {
+                bp: bp_real,
+                btp: bp_real > 0 ? bp_real + 2 : 0,
+                db: bp_real,
+                dbu: dbu_real,
+                dbd: bp_real - dbu_real,
+                bsp: bsp_real,
+                bsa: bsa_real,
+                bde: btp_real - bsa_real - bsp_real,
+                cantidadminima: dbu_real
+              };
+            
+              return {
+                id: miembro.id_colegio_colegio.id,
+                nombre: miembro.id_colegio_colegio.nombre,
+                ...Object.fromEntries(
+                  Object.entries(checks).map(([key, value]) => {
+                    const prop = key.replace('check', '').toLowerCase() as keyof typeof esperados;
+                    return [
+                      key,
+                      {
+                        ok: value,
+                        esperado: esperados[prop],
+                        real: (miembro as any)[prop]
+                      }
+                    ];
+                  })
+                ),
+                testCheck
+              };
+            }
+          })
+        );
+
+        return {
+          red: unaRed,
+          colegios: colegiosConCheck
+        };
+      })
+    );
+
+    return resultado;
+
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function sincronizarRedColegios(idRed:string){
+  const transaction = await sequelize.transaction();
+  try{
+      if (!idRed) {
+        return
+      }
+  
+      const miembros = await red_colegio.findAll({
+        where: { id_red: idRed, borrado: 0 },
+        include:[{model:colegio, as:'id_colegio_colegio'}],
+        transaction
+      });
+  
+      const resultados = [];
+  
+      for (const miembro of miembros) {
+        const idColegio = miembro.id_colegio;
+  
+        // 📚 Becas Publicadas
+        const becasPublicadas = await beca.sum('cantidad', {
+          where: { id_colegio: idColegio, id_red: idRed, borrado: 0 },
+          transaction
+        }) || 0;
+  
+        const btp = becasPublicadas > 0 ? becasPublicadas + 2 : 0;
+  
+        // 📜 Becas Solicitadas Propias (pendientes)
+        const becasSolicitadasPropias = await beca_solicitud.count({
+          where: {
+            id_estado: 0
+          },
+          include: [{
+            model: beca,
+            as: 'id_beca_beca',
+            required: true,
+            where: {
+              id_red: idRed,
+              id_colegio: idColegio
+            }
+          }],
+          transaction
+        });
+  
+        // 📜 Becas Solicitadas Aprobadas (aprobadas o pendiente de baja)
+        const becasSolicitadasAprobadas = await beca_solicitud.count({
+          where: {
+            id_colegio_solic: idColegio,
+            id_estado: { [Op.in]: [3, 5] }
+          },
+          include: [{
+            model: beca,
+            as: 'id_beca_beca',
+            required: true,
+            where: { id_red: idRed }
+          }],
+          transaction
+        });
+  
+        // 📜 Derecho utilizado (cuando solicita y se encuentra en 0, 3 o 5)
+        const derechoUtilizado = await beca_solicitud.count({
+          where: {
+            id_colegio_solic: idColegio,
+            id_estado: { [Op.in]: [0, 3, 5] }
+          },
+          include: [{
+            model: beca,
+            as: 'id_beca_beca',
+            required: true,
+            where: { id_red: idRed }
+          }],
+          transaction
+        });
+  
+        // 📜 ❗ Becas que el colegio ofreció y fueron aprobadas
+        const becasOfrecidasAprobadas = await beca_solicitud.count({
+          where: { id_estado: { [Op.in]: [3, 5] } },
+          include: [{
+            model: beca,
+            as: 'id_beca_beca',
+            required: true,
+            where: { id_colegio: idColegio,id_red: idRed }
+          }],
+          transaction
+        });
+  
+        // 📚 Recalcular campos
+        const db = becasPublicadas;          // derecho a beca = becas publicadas
+        const dbu = derechoUtilizado;         // derecho utilizado
+        const dbd = db - dbu;                 // derecho disponible
+        const bsp = becasSolicitadasPropias;  // becas solicitadas propias
+        const bsa = becasOfrecidasAprobadas;  // 🔥 becas solicitadas aprobadas (como oferente)
+        const bde = btp - bsa - bsp;           // becas disponibles
+  
+        // 🔧 Update
+        await red_colegio.update({
+          bp: becasPublicadas,
+          btp,
+          db,
+          dbu,
+          dbd,
+          bsp,
+          bsa,
+          bde
+        }, {
+          where: { id_red: idRed, id_colegio: idColegio },
+          transaction
+        });
+  
+        resultados.push({
+          id_colegio: idColegio,
+          nombre: miembro.id_colegio_colegio.nombre,
+          actualizacion: {
+            bp: becasPublicadas,
+            btp,
+            db,
+            dbu,
+            dbd,
+            bsp,
+            bsa, // Ahora sí correctamente
+            bde
+          }
+        });
+      }
+  
+      await transaction.commit();
+
+    return resultados
+
+  } catch (error) {
+    await transaction.rollback();
+    throw error
+  }
+};
+
+///// FUNCIONES INTERNAS ////
+
+async function actualizarRedColegiosVencimientoSQL(becasPendientes: any[], transaction: any) {
+  // 🔵 Agrupamos cantidad de solicitudes por colegio solicitante
   const cantidadSolicitantes = becasPendientes.reduce((acc, beca) => {
-    acc[beca.id_colegio_solic] = (acc[beca.id_colegio_solic] || 0) + 1;
+    const key = `${beca.id_colegio_solic}-${beca.id_beca_beca.id_red}`; // 👈 Usamos combinación ID colegio + ID red
+    acc[key] = (acc[key] || 0) + 1;
     return acc;
-  }, {} as Record<number, number>);
+  }, {} as Record<string, number>);
 
+  // 🟠 Agrupamos cantidad de oferentes
   const cantidadOferentes = becasPendientes.reduce((acc, beca) => {
-    acc[beca.id_beca_beca.id_colegio] = (acc[beca.id_beca_beca.id_colegio] || 0) + 1;
+    const key = `${beca.id_beca_beca.id_colegio}-${beca.id_beca_beca.id_red}`; 
+    acc[key] = (acc[key] || 0) + 1;
     return acc;
-  }, {} as Record<number, number>);
+  }, {} as Record<string, number>);
 
-  // 🚀 Actualizar solicitantes (se liberan becas solicitadas)
+  // 🚀 Primero actualizar DBU (solicitantes)
   if (Object.keys(cantidadSolicitantes).length > 0) {
     const solicitantesUpdate = `
       UPDATE red_colegio
       SET 
-        dbu = CASE id_colegio 
-          ${Object.entries(cantidadSolicitantes).map(([id, count]) => `WHEN ${id} THEN dbu - ${count}`).join(' ')}
+        dbu = CASE 
+          ${Object.entries(cantidadSolicitantes).map(([key, count]) => {
+            const [id_colegio, id_red] = key.split('-');
+            return `WHEN id_colegio = ${id_colegio} AND id_red = ${id_red} THEN dbu - ${count}`;
+          }).join(' ')}
           ELSE dbu
-        END,
-        dbd = CASE id_colegio 
-          ${Object.entries(cantidadSolicitantes).map(([id, count]) => `WHEN ${id} THEN db - (dbu - ${count})`).join(' ')}
-          ELSE (db - dbu)
         END
-      WHERE id_colegio IN (${Object.keys(cantidadSolicitantes).join(',')})
+      WHERE (${Object.entries(cantidadSolicitantes).map(([key]) => {
+          const [id_colegio, id_red] = key.split('-');
+          return `(id_colegio = ${id_colegio} AND id_red = ${id_red})`;
+      }).join(' OR ')})
     `;
-
     await sequelize.query(solicitantesUpdate, { transaction });
   }
 
-  // 🚀 Actualizar oferentes (se liberan becas ofertadas)
+  // 🚀 Luego actualizar BSP (oferentes)
   if (Object.keys(cantidadOferentes).length > 0) {
     const oferentesUpdate = `
       UPDATE red_colegio
       SET 
-        bsa = CASE id_colegio 
-          ${Object.entries(cantidadOferentes).map(([id, count]) => `WHEN ${id} THEN bsa - ${count}`).join(' ')}
-          ELSE bsa
-        END,
-        bde = CASE id_colegio 
-          ${Object.entries(cantidadOferentes).map(([id, count]) => `WHEN ${id} THEN (btp - (bsa - ${count}) - bsp)`).join(' ')}
-          ELSE (btp - bsa - bsp)
+        bsp = CASE 
+          ${Object.entries(cantidadOferentes).map(([key, count]) => {
+            const [id_colegio, id_red] = key.split('-');
+            return `WHEN id_colegio = ${id_colegio} AND id_red = ${id_red} THEN bsp - ${count}`;
+          }).join(' ')}
+          ELSE bsp
         END
-      WHERE id_colegio IN (${Object.keys(cantidadOferentes).join(',')})
+      WHERE (${Object.entries(cantidadOferentes).map(([key]) => {
+          const [id_colegio, id_red] = key.split('-');
+          return `(id_colegio = ${id_colegio} AND id_red = ${id_red})`;
+      }).join(' OR ')})
     `;
-
     await sequelize.query(oferentesUpdate, { transaction });
+  }
+
+  // 🚀 Actualizar dbd (disponibles solicitantes)
+  if (Object.keys(cantidadSolicitantes).length > 0) {
+    await sequelize.query(`
+      UPDATE red_colegio
+      SET dbd = db - dbu
+      WHERE ${Object.entries(cantidadSolicitantes).map(([key]) => {
+        const [id_colegio, id_red] = key.split('-');
+        return `(id_colegio = ${id_colegio} AND id_red = ${id_red})`;
+      }).join(' OR ')}
+    `, { transaction });
+  }
+
+  // 🚀 Actualizar bde (disponibles oferentes)
+  if (Object.keys(cantidadOferentes).length > 0) {
+    await sequelize.query(`
+      UPDATE red_colegio
+      SET bde = btp - bsa - bsp
+      WHERE ${Object.entries(cantidadOferentes).map(([key]) => {
+        const [id_colegio, id_red] = key.split('-');
+        return `(id_colegio = ${id_colegio} AND id_red = ${id_red})`;
+      }).join(' OR ')}
+    `, { transaction });
   }
 }
 
-///////////////////////////////////  
+async function actualizarRedColegiosBajaSQL(becasDadasDeBaja: any[], transaction: any) {
+  const cantidadSolicitantes = becasDadasDeBaja.reduce((acc, beca) => {
+    const key = `${beca.id_colegio_solic}-${beca.id_beca_beca.id_red}`;
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const cantidadOferentes = becasDadasDeBaja.reduce((acc, beca) => {
+    const key = `${beca.id_beca_beca.id_colegio}-${beca.id_beca_beca.id_red}`;
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  // 🟠 1. Decrementar DBU (solicitantes = quien tomó la beca)
+  if (Object.keys(cantidadSolicitantes).length > 0) {
+    const updateSolicitantes = `
+      UPDATE red_colegio
+      SET 
+        dbu = CASE
+          ${Object.entries(cantidadSolicitantes).map(([key, count]) => {
+            const [id_colegio, id_red] = key.split('-');
+            return `WHEN id_colegio = ${id_colegio} AND id_red = ${id_red} THEN dbu - ${count}`;
+          }).join(' ')}
+          ELSE dbu
+        END
+      WHERE ${Object.entries(cantidadSolicitantes).map(([key]) => {
+          const [id_colegio, id_red] = key.split('-');
+          return `(id_colegio = ${id_colegio} AND id_red = ${id_red})`;
+      }).join(' OR ')}
+    `;
+    await sequelize.query(updateSolicitantes, { transaction });
+
+    // Después recalcular dbd
+    await sequelize.query(`
+      UPDATE red_colegio
+      SET dbd = db - dbu
+      WHERE ${Object.entries(cantidadSolicitantes).map(([key]) => {
+          const [id_colegio, id_red] = key.split('-');
+          return `(id_colegio = ${id_colegio} AND id_red = ${id_red})`;
+      }).join(' OR ')}
+    `, { transaction });
+  }
+
+  // 🔵 2. Decrementar BSA (oferentes = quien ofreció la beca)
+  if (Object.keys(cantidadOferentes).length > 0) {
+    const updateOferentes = `
+      UPDATE red_colegio
+      SET 
+        bsa = CASE
+          ${Object.entries(cantidadOferentes).map(([key, count]) => {
+            const [id_colegio, id_red] = key.split('-');
+            return `WHEN id_colegio = ${id_colegio} AND id_red = ${id_red} THEN bsa - ${count}`;
+          }).join(' ')}
+          ELSE bsa
+        END
+      WHERE ${Object.entries(cantidadOferentes).map(([key]) => {
+          const [id_colegio, id_red] = key.split('-');
+          return `(id_colegio = ${id_colegio} AND id_red = ${id_red})`;
+      }).join(' OR ')}
+    `;
+    await sequelize.query(updateOferentes, { transaction });
+
+    // Después recalcular bde
+    await sequelize.query(`
+      UPDATE red_colegio
+      SET bde = btp - bsa - bsp
+      WHERE ${Object.entries(cantidadOferentes).map(([key]) => {
+          const [id_colegio, id_red] = key.split('-');
+          return `(id_colegio = ${id_colegio} AND id_red = ${id_red})`;
+      }).join(' OR ')}
+    `, { transaction });
+  }
+}
 
 async function registrarEjecucionAutomatizacion(
   tipo: 'BAJA' | 'VENCIDA' | 'POR_VENCER',
@@ -453,4 +863,75 @@ async function registrarEjecucionAutomatizacion(
   }, transaction ? { transaction } : {}); // Solo pasa {transaction} si existe
 
   return ejecucion; // 👈 retornamos
+}
+
+export async function obtenerParametro(clave: string): Promise<string | null> {
+  const parametro = await parametros.findOne({ where: { clave }, raw: true });
+  return parametro?.valor || null;
+}
+
+///////////////////////////////////  
+
+
+//// Tareas programadas /////
+/////// Todos los dias a las 00:01
+cron.schedule('40 20 * * *', async () => { 
+  await ejecutarBajaAutomaticaSiCorresponde(),
+  await ejecutarNotificacionPorVencerSiCorresponde();
+  await ejecutarNotificacionVencidaSiCorresponde()
+},{
+  timezone: "America/Argentina/Buenos_Aires"
+});
+
+/////// Todos los dias a las 12:00PM
+cron.schedule('0 12 * * *', async () => { 
+  await ejecutarNotificacionPorVencerSiCorresponde();
+  await ejecutarNotificacionVencidaSiCorresponde()
+},{
+  timezone: "America/Argentina/Buenos_Aires"
+})
+
+async function ejecutarBajaAutomaticaSiCorresponde() {
+  try {
+    console.log("🔍 [CRON] Validando si hoy se debe ejecutar la baja automática...");
+
+    const config = await parametros.findOne({ where: { clave: 'fecha_baja_autom' } });
+
+    if (!config || !config.valor) {
+      console.log("⚠️ No se encontró la fecha de baja automática en parámetros.");
+      return;
+    }
+
+    const hoy = new Date();
+    const dia = String(hoy.getDate()).padStart(2, '0');
+    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+    const fechaHoy = `${dia}/${mes}`;
+
+    if (fechaHoy !== config.valor) {
+      console.log(`📅 Hoy es ${fechaHoy}, y la baja está programada para ${config.valor}. No se ejecuta.`);
+      return;
+    }
+
+    console.log("✅ Fecha coincide. Ejecutando baja automática...");
+    await procesarBecasDadaBaja();
+
+  } catch (error) {
+    console.error("❌ Error al validar fecha de ejecución automática:", error);
+  }
+}
+
+async function ejecutarNotificacionPorVencerSiCorresponde() {
+  try {
+    await notificarBecasPorVencer();
+  } catch (error) {
+    console.error("❌ Error en ejecución automática de notificación por vencer:", error);
+  }
+}
+
+async function ejecutarNotificacionVencidaSiCorresponde() {
+  try {
+    await notificarBecasVencidas();
+  } catch (error) {
+    console.error("❌ Error en ejecución automática de notificación por vencer:", error);
+  }
 }

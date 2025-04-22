@@ -3,7 +3,9 @@ import { DataTypes, Model, Optional } from 'sequelize';
 import type { autorizados, autorizadosId } from './autorizados';
 import type { beca, becaId } from './beca';
 import type { beca_solicitud, beca_solicitudId } from './beca_solicitud';
+import type { forma_pago, forma_pagoId } from './forma_pago';
 import type { notificaciones, notificacionesId } from './notificaciones';
+import type { plan, planId } from './plan';
 import type { red, redId } from './red';
 import type { red_colegio, red_colegioId } from './red_colegio';
 import type { usuario, usuarioId } from './usuario';
@@ -24,11 +26,13 @@ export interface colegioAttributes {
   suspendido?: number;
   borrado?: number;
   foto?: string;
+  id_plan: number;
+  id_forma_pago: number;
 }
 
 export type colegioPk = "id";
 export type colegioId = colegio[colegioPk];
-export type colegioOptionalAttributes = "id" | "email" | "suspendido" | "borrado" | "foto";
+export type colegioOptionalAttributes = "id" | "email" | "suspendido" | "borrado" | "foto" | "id_plan" | "id_forma_pago";
 export type colegioCreationAttributes = Optional<colegioAttributes, colegioOptionalAttributes>;
 
 export class colegio extends Model<colegioAttributes, colegioCreationAttributes> implements colegioAttributes {
@@ -46,6 +50,8 @@ export class colegio extends Model<colegioAttributes, colegioCreationAttributes>
   suspendido?: number;
   borrado?: number;
   foto?: string;
+  id_plan!: number;
+  id_forma_pago!: number;
 
   // colegio hasMany autorizados via id_colegio
   autorizados!: autorizados[];
@@ -143,6 +149,16 @@ export class colegio extends Model<colegioAttributes, colegioCreationAttributes>
   hasUsuario!: Sequelize.HasManyHasAssociationMixin<usuario, usuarioId>;
   hasUsuarios!: Sequelize.HasManyHasAssociationsMixin<usuario, usuarioId>;
   countUsuarios!: Sequelize.HasManyCountAssociationsMixin;
+  // colegio belongsTo forma_pago via id_forma_pago
+  id_forma_pago_forma_pago!: forma_pago;
+  getId_forma_pago_forma_pago!: Sequelize.BelongsToGetAssociationMixin<forma_pago>;
+  setId_forma_pago_forma_pago!: Sequelize.BelongsToSetAssociationMixin<forma_pago, forma_pagoId>;
+  createId_forma_pago_forma_pago!: Sequelize.BelongsToCreateAssociationMixin<forma_pago>;
+  // colegio belongsTo plan via id_plan
+  id_plan_plan!: plan;
+  getId_plan_plan!: Sequelize.BelongsToGetAssociationMixin<plan>;
+  setId_plan_plan!: Sequelize.BelongsToSetAssociationMixin<plan, planId>;
+  createId_plan_plan!: Sequelize.BelongsToCreateAssociationMixin<plan>;
   // colegio belongsTo zona_localidad via id_zona
   id_zona_zona_localidad!: zona_localidad;
   getId_zona_zona_localidad!: Sequelize.BelongsToGetAssociationMixin<zona_localidad>;
@@ -216,6 +232,24 @@ export class colegio extends Model<colegioAttributes, colegioCreationAttributes>
       type: DataTypes.STRING(255),
       allowNull: true,
       defaultValue: "\/uploads\/colegio\/default.png"
+    },
+    id_plan: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: -1,
+      references: {
+        model: 'plan',
+        key: 'id'
+      }
+    },
+    id_forma_pago: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: -1,
+      references: {
+        model: 'forma_pago',
+        key: 'id'
+      }
     }
   }, {
     sequelize,
@@ -235,6 +269,20 @@ export class colegio extends Model<colegioAttributes, colegioCreationAttributes>
         using: "BTREE",
         fields: [
           { name: "id_zona" },
+        ]
+      },
+      {
+        name: "fk_colegio_plan",
+        using: "BTREE",
+        fields: [
+          { name: "id_plan" },
+        ]
+      },
+      {
+        name: "fk_colegio_forma_pago",
+        using: "BTREE",
+        fields: [
+          { name: "id_forma_pago" },
         ]
       },
     ]

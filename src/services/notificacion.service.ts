@@ -9,8 +9,7 @@ import { notificaciones } from "../models/notificaciones";
 const obtenerNotificaciones = async (
   idUsuario: string, 
   idRol: number, 
-  idColegio: string, 
-  transaction: Transaction
+  idColegio: string
 ) => {
   try {
     // Si el rol es 0, no tiene notificaciones
@@ -28,27 +27,31 @@ const obtenerNotificaciones = async (
     let notificacionesDB = await notificaciones.findAll({
       where: {
         [Op.or]: [
-          { id_colegio_ofer: idColegio, leido_ofer: 0 }, // Notificaciones de solicitudes
-          { id_colegio_solic: idColegio, leido_solic: 0 } // Notificaciones de mis solicitudes
+          { id_colegio_ofer: idColegio, leido_ofer: 0 },
+          { id_colegio_solic: idColegio, leido_solic: 0 }
         ]
       },
-      transaction,
-      include:[{
-        model:beca_solicitud,
-        as:'id_solicitud_beca_solicitud',
-        include:[{
-            model:beca,
-            as:'id_beca_beca'
-        }]
-      },{
-        model:colegio,
-        as:'id_colegio_ofer_colegio'
-      },
-      {
-        model:colegio,
-        as:'id_colegio_solic_colegio'
-      }]
+      include: [
+        {
+          model: beca_solicitud,
+          as: 'id_solicitud_beca_solicitud',
+          include: [{
+            model: beca,
+            as: 'id_beca_beca'
+          }]
+        },
+        {
+          model: colegio,
+          as: 'id_colegio_ofer_colegio'
+        },
+        {
+          model: colegio,
+          as: 'id_colegio_solic_colegio'
+        }
+      ],
+      order: [['fecha', 'DESC']] // 👈🚀 acá ordenamos por fecha descendente
     });
+    
 
     // 🔄 Mapear solicitudes
     const solicitudesMapeadas = notificacionesDB

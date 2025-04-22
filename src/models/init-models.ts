@@ -25,6 +25,8 @@ import { menu as _menu } from "./menu";
 import type { menuAttributes, menuCreationAttributes } from "./menu";
 import { notificaciones as _notificaciones } from "./notificaciones";
 import type { notificacionesAttributes, notificacionesCreationAttributes } from "./notificaciones";
+import { parametros as _parametros } from "./parametros";
+import type { parametrosAttributes, parametrosCreationAttributes } from "./parametros";
 import { plan as _plan } from "./plan";
 import type { planAttributes, planCreationAttributes } from "./plan";
 import { red as _red } from "./red";
@@ -56,6 +58,7 @@ export {
   _forma_pago as forma_pago,
   _menu as menu,
   _notificaciones as notificaciones,
+  _parametros as parametros,
   _plan as plan,
   _red as red,
   _red_colegio as red_colegio,
@@ -93,6 +96,8 @@ export type {
   menuCreationAttributes,
   notificacionesAttributes,
   notificacionesCreationAttributes,
+  parametrosAttributes,
+  parametrosCreationAttributes,
   planAttributes,
   planCreationAttributes,
   redAttributes,
@@ -125,6 +130,7 @@ export function initModels(sequelize: Sequelize) {
   const forma_pago = _forma_pago.initModel(sequelize);
   const menu = _menu.initModel(sequelize);
   const notificaciones = _notificaciones.initModel(sequelize);
+  const parametros = _parametros.initModel(sequelize);
   const plan = _plan.initModel(sequelize);
   const red = _red.initModel(sequelize);
   const red_colegio = _red_colegio.initModel(sequelize);
@@ -164,6 +170,10 @@ export function initModels(sequelize: Sequelize) {
   colegio.hasMany(red_colegio, { as: "red_colegios", foreignKey: "id_colegio"});
   usuario.belongsTo(colegio, { as: "id_colegio_colegio", foreignKey: "id_colegio"});
   colegio.hasMany(usuario, { as: "usuarios", foreignKey: "id_colegio"});
+  colegio.belongsTo(forma_pago, { as: "id_forma_pago_forma_pago", foreignKey: "id_forma_pago"});
+  forma_pago.hasMany(colegio, { as: "colegios", foreignKey: "id_forma_pago"});
+  colegio.belongsTo(plan, { as: "id_plan_plan", foreignKey: "id_plan"});
+  plan.hasMany(colegio, { as: "colegios", foreignKey: "id_plan"});
   beca.belongsTo(red, { as: "id_red_red", foreignKey: "id_red"});
   red.hasMany(beca, { as: "becas", foreignKey: "id_red"});
   red_colegio.belongsTo(red, { as: "id_red_red", foreignKey: "id_red"});
@@ -203,6 +213,7 @@ export function initModels(sequelize: Sequelize) {
     forma_pago: forma_pago,
     menu: menu,
     notificaciones: notificaciones,
+    parametros: parametros,
     plan: plan,
     red: red,
     red_colegio: red_colegio,

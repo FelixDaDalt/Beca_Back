@@ -3,6 +3,7 @@ import { Op, Sequelize, Transaction, where } from "sequelize";
 import { red } from "../models/red";
 import { red_colegio } from "../models/red_colegio";
 import { beca } from "../models/beca";
+import { beca_solicitud } from "../models/beca_solicitud";
 
 interface nuevaRed{
     red:red
@@ -522,30 +523,37 @@ const editarMiembrosRed = async (miembros: edicionMiembros, idRol: number, idCol
 
 
 //Miembros
-const obtenerMiembros = async (idRed:string, rol:number) => {
+const obtenerMiembros = async (idRed: string, rol: number) => {
     try {
-        const whereBorrado: any = rol == 0 ? {id_red: idRed}:{id_red: idRed,borrado:0};
+      const whereBorrado: any = rol == 0 ? { id_red: idRed } : { id_red: idRed, borrado: 0 };
+  
+      const miembrosEncontrados = await red_colegio.findAll({
+        where: whereBorrado,
+        include: [
+          {
+            model: colegio,
+            as: 'id_colegio_colegio',
+            required: false
+          }
+        ],
+        order: [
+          ['anfitrion', 'DESC'],
+          [{ model: colegio, as: 'id_colegio_colegio' }, 'nombre', 'ASC']
+        ],
+        raw: true,
+        nest: true
+      });
 
-        const miembrosEcnontrados = await red_colegio.findAll({
-            where: whereBorrado,
-            include: [{
-                model: colegio,
-                as: 'id_colegio_colegio', // Asegúrate de que esta relación esté configurada
-                required: false
-            }],
-            order: [
-                ['anfitrion', 'DESC'], 
-                [{ model: colegio, as: 'id_colegio_colegio' }, 'nombre', 'ASC'] 
-            ]
-        });
 
-        return miembrosEcnontrados;
-
+  
+      return miembrosEncontrados;
+  
     } catch (error) {
-        throw error;
+      throw error;
     }
-};
-
+  };
+  
+  
 const meRed = async (idRed:string, idColegio:string) => {
     try {
         const misDatos = await red_colegio.findOne({
@@ -572,7 +580,7 @@ const meRed = async (idRed:string, idColegio:string) => {
             dbu: porcentajeDbu, // Porcentaje de becas utilizadas
             dbd: porcentajeDbd, // Porcentaje de becas disponibles
         };
-        
+       
 
         return {
             misDatos,
@@ -583,4 +591,8 @@ const meRed = async (idRed:string, idColegio:string) => {
         throw error;
     }
 };
+
+
+
+
 export{altaRed,listadoRedes,borrarRed, obtenerRed,colegiosDisponibles,borrarMiembro,editarDatosRed,editarMiembrosRed,obtenerMiembros,meRed}
