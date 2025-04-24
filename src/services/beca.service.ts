@@ -650,7 +650,7 @@ const miSolicitudDetalle = async (
                 },
                 {
                     model:usuario,
-                    as:'id_pariente_usuario',
+                    as:'id_pariente_autorizado',
                     attributes: ['nombre', 'apellido'],
                     required:true
                 },
@@ -699,7 +699,7 @@ const miSolicitudDetalle = async (
             },
             solicitante: {
                 usuario: solicitud?.id_usuario_solic_usuario,
-                pariente: solicitud?.id_pariente_usuario.apellido+', '+solicitud?.id_pariente_usuario.nombre,
+                pariente: solicitud?.id_pariente_autorizado.apellido+', '+solicitud?.id_pariente_autorizado.nombre,
             },
             solicitud:{
                 colegio: solicitud?.id_beca_beca.id_colegio_colegio

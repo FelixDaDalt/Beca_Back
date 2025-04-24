@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.zona_localidad = exports.zona = exports.usuario = exports.tyc = exports.roles = exports.red_colegio = exports.red = exports.plan = exports.parametros = exports.notificaciones = exports.menu = exports.forma_pago = exports.colegio = exports.beca_solicitud = exports.beca_resolucion = exports.beca_estado = exports.beca_automatizacion_log = exports.beca_automatizacion_ejecucion = exports.beca = exports.autorizados = exports.administrador = exports.actividad_log = void 0;
+exports.zona_localidad = exports.zona = exports.usuario = exports.tyc = exports.roles = exports.reporte_error = exports.red_colegio = exports.red = exports.plan = exports.parametros = exports.notificaciones = exports.menu = exports.forma_pago = exports.colegio = exports.beca_solicitud = exports.beca_resolucion = exports.beca_estado = exports.beca_automatizacion_log = exports.beca_automatizacion_ejecucion = exports.beca = exports.autorizados = exports.administrador = exports.actividad_log = void 0;
 exports.initModels = initModels;
 const actividad_log_1 = require("./actividad_log");
 Object.defineProperty(exports, "actividad_log", { enumerable: true, get: function () { return actividad_log_1.actividad_log; } });
@@ -36,6 +36,8 @@ const red_1 = require("./red");
 Object.defineProperty(exports, "red", { enumerable: true, get: function () { return red_1.red; } });
 const red_colegio_1 = require("./red_colegio");
 Object.defineProperty(exports, "red_colegio", { enumerable: true, get: function () { return red_colegio_1.red_colegio; } });
+const reporte_error_1 = require("./reporte_error");
+Object.defineProperty(exports, "reporte_error", { enumerable: true, get: function () { return reporte_error_1.reporte_error; } });
 const roles_1 = require("./roles");
 Object.defineProperty(exports, "roles", { enumerable: true, get: function () { return roles_1.roles; } });
 const tyc_1 = require("./tyc");
@@ -64,6 +66,7 @@ function initModels(sequelize) {
     const plan = plan_1.plan.initModel(sequelize);
     const red = red_1.red.initModel(sequelize);
     const red_colegio = red_colegio_1.red_colegio.initModel(sequelize);
+    const reporte_error = reporte_error_1.reporte_error.initModel(sequelize);
     const roles = roles_1.roles.initModel(sequelize);
     const tyc = tyc_1.tyc.initModel(sequelize);
     const usuario = usuario_1.usuario.initModel(sequelize);
@@ -123,6 +126,8 @@ function initModels(sequelize) {
     usuario.hasMany(beca_solicitud, { as: "id_usuario_baja_beca_solicituds", foreignKey: "id_usuario_baja" });
     beca_solicitud.belongsTo(usuario, { as: "id_pariente_usuario", foreignKey: "id_pariente" });
     usuario.hasMany(beca_solicitud, { as: "id_pariente_beca_solicituds", foreignKey: "id_pariente" });
+    reporte_error.belongsTo(usuario, { as: "id_usuario_usuario", foreignKey: "id_usuario" });
+    usuario.hasMany(reporte_error, { as: "reporte_errors", foreignKey: "id_usuario" });
     zona_localidad.belongsTo(zona, { as: "id_zona_zona", foreignKey: "id_zona" });
     zona.hasMany(zona_localidad, { as: "zona_localidads", foreignKey: "id_zona" });
     colegio.belongsTo(zona_localidad, { as: "id_zona_zona_localidad", foreignKey: "id_zona" });
@@ -145,6 +150,7 @@ function initModels(sequelize) {
         plan: plan,
         red: red,
         red_colegio: red_colegio,
+        reporte_error: reporte_error,
         roles: roles,
         tyc: tyc,
         usuario: usuario,

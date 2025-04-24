@@ -43,13 +43,12 @@ const altaAutorizado = async (idColegio:number, nuevoAutorizado: usuario,transac
     }
 };
 
-const listadoAutorizados = async (idConsulta:string, id_colegio:number) => {
+const listadoAutorizados = async (id_colegio:number) => {
     try {
         const listado = await autorizados.findAll({
             where: {
                 id_colegio:id_colegio,
                 borrado: 0,
-                id: { [Op.ne]: idConsulta }
             },
             attributes: { exclude: ['borrado'] },
         });

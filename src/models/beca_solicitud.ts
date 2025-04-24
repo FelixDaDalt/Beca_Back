@@ -1,5 +1,6 @@
 import * as Sequelize from 'sequelize';
 import { DataTypes, Model, Optional } from 'sequelize';
+import type { autorizados, autorizadosId } from './autorizados';
 import type { beca, becaId } from './beca';
 import type { beca_automatizacion_log, beca_automatizacion_logId } from './beca_automatizacion_log';
 import type { beca_estado, beca_estadoId } from './beca_estado';
@@ -64,6 +65,11 @@ export class beca_solicitud extends Model<beca_solicitudAttributes, beca_solicit
   notificarPorVencer?: number;
   notificarVencida?: number;
 
+  // beca_solicitud belongsTo autorizados via id_pariente
+  id_pariente_autorizado!: autorizados;
+  getId_pariente_autorizado!: Sequelize.BelongsToGetAssociationMixin<autorizados>;
+  setId_pariente_autorizado!: Sequelize.BelongsToSetAssociationMixin<autorizados, autorizadosId>;
+  createId_pariente_autorizado!: Sequelize.BelongsToCreateAssociationMixin<autorizados>;
   // beca_solicitud belongsTo beca via id_beca
   id_beca_beca!: beca;
   getId_beca_beca!: Sequelize.BelongsToGetAssociationMixin<beca>;
@@ -123,11 +129,6 @@ export class beca_solicitud extends Model<beca_solicitudAttributes, beca_solicit
   getId_usuario_baja_usuario!: Sequelize.BelongsToGetAssociationMixin<usuario>;
   setId_usuario_baja_usuario!: Sequelize.BelongsToSetAssociationMixin<usuario, usuarioId>;
   createId_usuario_baja_usuario!: Sequelize.BelongsToCreateAssociationMixin<usuario>;
-  // beca_solicitud belongsTo usuario via id_pariente
-  id_pariente_usuario!: usuario;
-  getId_pariente_usuario!: Sequelize.BelongsToGetAssociationMixin<usuario>;
-  setId_pariente_usuario!: Sequelize.BelongsToSetAssociationMixin<usuario, usuarioId>;
-  createId_pariente_usuario!: Sequelize.BelongsToCreateAssociationMixin<usuario>;
 
   static initModel(sequelize: Sequelize.Sequelize): typeof beca_solicitud {
     return beca_solicitud.init({
@@ -252,7 +253,7 @@ export class beca_solicitud extends Model<beca_solicitudAttributes, beca_solicit
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: 'usuario',
+        model: 'autorizados',
         key: 'id'
       }
     },

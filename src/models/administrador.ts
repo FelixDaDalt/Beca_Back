@@ -17,12 +17,12 @@ export interface administradorAttributes {
   borrado?: number;
   foto?: string;
   email: string;
-  superAdmin:number;
+  superAdmin: number;
 }
 
 export type administradorPk = "id";
 export type administradorId = administrador[administradorPk];
-export type administradorOptionalAttributes = "id" | "celular" | "telefono" | "id_rol" | "cambiarPass" | "suspendido" | "borrado" | "foto" | "email";
+export type administradorOptionalAttributes = "id" | "celular" | "telefono" | "id_rol" | "cambiarPass" | "suspendido" | "borrado" | "foto" | "email" | "superAdmin";
 export type administradorCreationAttributes = Optional<administradorAttributes, administradorOptionalAttributes>;
 
 export class administrador extends Model<administradorAttributes, administradorCreationAttributes> implements administradorAttributes {
@@ -39,7 +39,7 @@ export class administrador extends Model<administradorAttributes, administradorC
   borrado?: number;
   foto?: string;
   email!: string;
-  superAdmin!:number;
+  superAdmin!: number;
 
   // administrador hasMany actividad_log via admin_id
   actividad_logs!: actividad_log[];
@@ -128,10 +128,10 @@ export class administrador extends Model<administradorAttributes, administradorC
       defaultValue: "No Definido"
     },
     superAdmin: {
-      type: DataTypes.BOOLEAN,
+      type: DataTypes.INTEGER,
       allowNull: true,
       defaultValue: 0
-    },
+    }
   }, {
     sequelize,
     tableName: 'administrador',

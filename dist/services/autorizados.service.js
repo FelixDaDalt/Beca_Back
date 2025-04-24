@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.borrarAutorizado = exports.suspenderAutorizado = exports.editarAutorizado = exports.obtenerAutorizado = exports.listadoAutorizados = exports.altaAutorizado = void 0;
-const sequelize_1 = require("sequelize");
 const autorizados_1 = require("../models/autorizados");
 const altaAutorizado = async (idColegio, nuevoAutorizado, transaction) => {
     try {
@@ -31,13 +30,12 @@ const altaAutorizado = async (idColegio, nuevoAutorizado, transaction) => {
     }
 };
 exports.altaAutorizado = altaAutorizado;
-const listadoAutorizados = async (idConsulta, id_colegio) => {
+const listadoAutorizados = async (id_colegio) => {
     try {
         const listado = await autorizados_1.autorizados.findAll({
             where: {
                 id_colegio: id_colegio,
                 borrado: 0,
-                id: { [sequelize_1.Op.ne]: idConsulta }
             },
             attributes: { exclude: ['borrado'] },
         });

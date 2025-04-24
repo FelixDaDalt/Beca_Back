@@ -10,8 +10,7 @@ const autorizados_service_1 = require("../services/autorizados.service");
 const ObtenerAutorizados = async (req, res) => {
     try {
         const id_colegio = req.user?.id_colegio;
-        const idConsulta = req.user?.id;
-        const listado = await (0, autorizados_service_1.listadoAutorizados)(idConsulta, id_colegio);
+        const listado = await (0, autorizados_service_1.listadoAutorizados)(id_colegio);
         const data = { "data": listado, "mensaje": "Listado de AUtorizados obtenidos" };
         res.status(200).send(data);
     }

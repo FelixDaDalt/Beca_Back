@@ -21,8 +21,6 @@ import { colegio as _colegio } from "./colegio";
 import type { colegioAttributes, colegioCreationAttributes } from "./colegio";
 import { forma_pago as _forma_pago } from "./forma_pago";
 import type { forma_pagoAttributes, forma_pagoCreationAttributes } from "./forma_pago";
-import { menu as _menu } from "./menu";
-import type { menuAttributes, menuCreationAttributes } from "./menu";
 import { notificaciones as _notificaciones } from "./notificaciones";
 import type { notificacionesAttributes, notificacionesCreationAttributes } from "./notificaciones";
 import { parametros as _parametros } from "./parametros";
@@ -33,6 +31,8 @@ import { red as _red } from "./red";
 import type { redAttributes, redCreationAttributes } from "./red";
 import { red_colegio as _red_colegio } from "./red_colegio";
 import type { red_colegioAttributes, red_colegioCreationAttributes } from "./red_colegio";
+import { reporte_error as _reporte_error } from "./reporte_error";
+import type { reporte_errorAttributes, reporte_errorCreationAttributes } from "./reporte_error";
 import { roles as _roles } from "./roles";
 import type { rolesAttributes, rolesCreationAttributes } from "./roles";
 import { tyc as _tyc } from "./tyc";
@@ -56,12 +56,12 @@ export {
   _beca_solicitud as beca_solicitud,
   _colegio as colegio,
   _forma_pago as forma_pago,
-  _menu as menu,
   _notificaciones as notificaciones,
   _parametros as parametros,
   _plan as plan,
   _red as red,
   _red_colegio as red_colegio,
+  _reporte_error as reporte_error,
   _roles as roles,
   _tyc as tyc,
   _usuario as usuario,
@@ -92,8 +92,6 @@ export type {
   colegioCreationAttributes,
   forma_pagoAttributes,
   forma_pagoCreationAttributes,
-  menuAttributes,
-  menuCreationAttributes,
   notificacionesAttributes,
   notificacionesCreationAttributes,
   parametrosAttributes,
@@ -104,6 +102,8 @@ export type {
   redCreationAttributes,
   red_colegioAttributes,
   red_colegioCreationAttributes,
+  reporte_errorAttributes,
+  reporte_errorCreationAttributes,
   rolesAttributes,
   rolesCreationAttributes,
   tycAttributes,
@@ -128,12 +128,12 @@ export function initModels(sequelize: Sequelize) {
   const beca_solicitud = _beca_solicitud.initModel(sequelize);
   const colegio = _colegio.initModel(sequelize);
   const forma_pago = _forma_pago.initModel(sequelize);
-  const menu = _menu.initModel(sequelize);
   const notificaciones = _notificaciones.initModel(sequelize);
   const parametros = _parametros.initModel(sequelize);
   const plan = _plan.initModel(sequelize);
   const red = _red.initModel(sequelize);
   const red_colegio = _red_colegio.initModel(sequelize);
+  const reporte_error = _reporte_error.initModel(sequelize);
   const roles = _roles.initModel(sequelize);
   const tyc = _tyc.initModel(sequelize);
   const usuario = _usuario.initModel(sequelize);
@@ -144,6 +144,8 @@ export function initModels(sequelize: Sequelize) {
   red.belongsToMany(colegio, { as: 'id_colegio_colegios', through: red_colegio, foreignKey: "id_red", otherKey: "id_colegio" });
   actividad_log.belongsTo(administrador, { as: "admin", foreignKey: "admin_id"});
   administrador.hasMany(actividad_log, { as: "actividad_logs", foreignKey: "admin_id"});
+  beca_solicitud.belongsTo(autorizados, { as: "id_pariente_autorizado", foreignKey: "id_pariente"});
+  autorizados.hasMany(beca_solicitud, { as: "beca_solicituds", foreignKey: "id_pariente"});
   beca_solicitud.belongsTo(beca, { as: "id_beca_beca", foreignKey: "id_beca"});
   beca.hasMany(beca_solicitud, { as: "beca_solicituds", foreignKey: "id_beca"});
   beca_automatizacion_log.belongsTo(beca_automatizacion_ejecucion, { as: "id_ejecucion_beca_automatizacion_ejecucion", foreignKey: "id_ejecucion"});
@@ -192,8 +194,6 @@ export function initModels(sequelize: Sequelize) {
   usuario.hasMany(beca_solicitud, { as: "id_usuario_reso_beca_solicituds", foreignKey: "id_usuario_reso"});
   beca_solicitud.belongsTo(usuario, { as: "id_usuario_baja_usuario", foreignKey: "id_usuario_baja"});
   usuario.hasMany(beca_solicitud, { as: "id_usuario_baja_beca_solicituds", foreignKey: "id_usuario_baja"});
-  beca_solicitud.belongsTo(usuario, { as: "id_pariente_usuario", foreignKey: "id_pariente"});
-  usuario.hasMany(beca_solicitud, { as: "id_pariente_beca_solicituds", foreignKey: "id_pariente"});
   zona_localidad.belongsTo(zona, { as: "id_zona_zona", foreignKey: "id_zona"});
   zona.hasMany(zona_localidad, { as: "zona_localidads", foreignKey: "id_zona"});
   colegio.belongsTo(zona_localidad, { as: "id_zona_zona_localidad", foreignKey: "id_zona"});
@@ -211,12 +211,12 @@ export function initModels(sequelize: Sequelize) {
     beca_solicitud: beca_solicitud,
     colegio: colegio,
     forma_pago: forma_pago,
-    menu: menu,
     notificaciones: notificaciones,
     parametros: parametros,
     plan: plan,
     red: red,
     red_colegio: red_colegio,
+    reporte_error: reporte_error,
     roles: roles,
     tyc: tyc,
     usuario: usuario,

@@ -116,18 +116,6 @@ export class usuario extends Model<usuarioAttributes, usuarioCreationAttributes>
   hasId_usuario_baja_beca_solicitud!: Sequelize.HasManyHasAssociationMixin<beca_solicitud, beca_solicitudId>;
   hasId_usuario_baja_beca_solicituds!: Sequelize.HasManyHasAssociationsMixin<beca_solicitud, beca_solicitudId>;
   countId_usuario_baja_beca_solicituds!: Sequelize.HasManyCountAssociationsMixin;
-  // usuario hasMany beca_solicitud via id_pariente
-  id_pariente_beca_solicituds!: beca_solicitud[];
-  getId_pariente_beca_solicituds!: Sequelize.HasManyGetAssociationsMixin<beca_solicitud>;
-  setId_pariente_beca_solicituds!: Sequelize.HasManySetAssociationsMixin<beca_solicitud, beca_solicitudId>;
-  addId_pariente_beca_solicitud!: Sequelize.HasManyAddAssociationMixin<beca_solicitud, beca_solicitudId>;
-  addId_pariente_beca_solicituds!: Sequelize.HasManyAddAssociationsMixin<beca_solicitud, beca_solicitudId>;
-  createId_pariente_beca_solicitud!: Sequelize.HasManyCreateAssociationMixin<beca_solicitud>;
-  removeId_pariente_beca_solicitud!: Sequelize.HasManyRemoveAssociationMixin<beca_solicitud, beca_solicitudId>;
-  removeId_pariente_beca_solicituds!: Sequelize.HasManyRemoveAssociationsMixin<beca_solicitud, beca_solicitudId>;
-  hasId_pariente_beca_solicitud!: Sequelize.HasManyHasAssociationMixin<beca_solicitud, beca_solicitudId>;
-  hasId_pariente_beca_solicituds!: Sequelize.HasManyHasAssociationsMixin<beca_solicitud, beca_solicitudId>;
-  countId_pariente_beca_solicituds!: Sequelize.HasManyCountAssociationsMixin;
 
   static initModel(sequelize: Sequelize.Sequelize): typeof usuario {
     return usuario.init({

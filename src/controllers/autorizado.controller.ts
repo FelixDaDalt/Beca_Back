@@ -10,8 +10,7 @@ import { altaAutorizado, borrarAutorizado, editarAutorizado, listadoAutorizados,
 const ObtenerAutorizados = async (req:RequestExt,res:Response)=>{
     try{ 
         const id_colegio = req.user?.id_colegio
-        const idConsulta = req.user?.id
-        const listado = await listadoAutorizados(idConsulta as string, id_colegio)
+        const listado = await listadoAutorizados(id_colegio)
         const data = {"data":listado,"mensaje":"Listado de AUtorizados obtenidos"}
         res.status(200).send(data);
     }catch(e){
