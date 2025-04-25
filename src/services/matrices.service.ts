@@ -1,3 +1,4 @@
+import { autorizados } from '../models/autorizados';
 import sequelize from '../config/database';
 import { red_colegio } from '../models/red_colegio';
 import { Transaction } from "sequelize";
@@ -28,7 +29,7 @@ export class BecaService {
    * - Recalcula `bde` en el colegio solicitado.
    */
 
-    static async solicitarBeca(idColegioSolicitante: number|string, idColegioSolicitado: number|string, cantidad: number, idRed:number|string, transaction: Transaction) {
+    static async solicitarBeca(idColegioSolicitante: number|string, idColegioSolicitado: number|string, cantidad: number, idRed:number|string, parientesUsados: Map<number, number>, transaction: Transaction) {
         try {
 
             // Incrementa `dbu` en el colegio solicitante
@@ -42,6 +43,16 @@ export class BecaService {
 
             // Recalcula `bde`
             await this.actualizarBDE(idColegioSolicitado, idRed, transaction);
+
+            
+            // Incrementa `utilizadas` id_pariente (autorizados)
+              for (const [idPariente, cantidad] of parientesUsados.entries()) {
+                await autorizados.increment(
+                  { utilizadas: cantidad },
+                  { where: { id: idPariente }, transaction }
+                );
+              }
+            
         } catch (error:any) {
             throw new Error(`Error al actualizar matrices: ${error.message}`);
         }
@@ -73,13 +84,19 @@ export class BecaService {
    * - Recalcula `dbd` en el colegio solicitante.
    * - Recalcula `bde` en el colegio solicitado.
    */
-  static async rechazarBeca(colegioSolicitante: number|string, colegioSolicitado: number|string,idRed:number|string, transaction: Transaction) {
+  static async rechazarBeca(colegioSolicitante: number|string, colegioSolicitado: number|string,idRed:number|string, idPariente: number, transaction: Transaction) {
     try {
       await red_colegio.decrement({ dbu: 1 }, { where: { id_colegio: colegioSolicitante,id_red:idRed }, transaction });
       await this.actualizarDBD(colegioSolicitante,idRed, transaction);
 
       await red_colegio.decrement({ bsp: 1 }, { where: { id_colegio: colegioSolicitado, id_red:idRed }, transaction });
       await this.actualizarBDE(colegioSolicitado,idRed, transaction);
+
+      // Decrement `utilizadas` id_pariente (autorizados)
+      await autorizados.decrement(
+        { utilizadas: 1 },
+        { where: { id: idPariente }, transaction }
+      );
     } catch (error) {
       console.error("Error al rechazar la beca:", error);
       throw error;
@@ -93,7 +110,7 @@ export class BecaService {
    * - Recalcula `dbd` en el colegio solicitante.
    * - Recalcula `bde` en el colegio solicitado.
    */
-  static async desestimarBeca(colegioSolicitante: number | string, colegioSolicitado: number | string, idRed: number | string, transaction: Transaction) {
+  static async desestimarBeca(colegioSolicitante: number | string, colegioSolicitado: number | string, idRed: number | string, idPariente: number,transaction: Transaction) {
     try {
 
         await red_colegio.decrement({ dbu: 1 }, { where: { id_colegio: colegioSolicitante, id_red: idRed }, transaction });
@@ -101,6 +118,10 @@ export class BecaService {
 
         await red_colegio.decrement({ bsp: 1 }, { where: { id_colegio: colegioSolicitado, id_red: idRed }, transaction });
         await this.actualizarBDE(colegioSolicitado, idRed, transaction);
+        await autorizados.decrement(
+          { utilizadas: 1 },
+          { where: { id: idPariente }, transaction }
+        );
 
     } catch (error) {
         console.error("Error al desestimar beca:", error);

@@ -1,4 +1,4 @@
-import { Transaction } from "sequelize";
+import { Op, Transaction } from "sequelize";
 import { plan } from "../models/plan";
 import { beca_automatizacion_ejecucion } from "../models/beca_automatizacion_ejecucion";
 import { beca_automatizacion_log } from "../models/beca_automatizacion_log";
@@ -22,10 +22,10 @@ interface FiltroEjecucion {
       if (fechaDesde || fechaHasta) {
         where.fecha = {};
         if (fechaDesde) {
-          where.fecha['$gte'] = new Date(fechaDesde + 'T00:00:00.000Z');
+          where.fecha[Op.gte] = new Date(fechaDesde + 'T00:00:00');
         }
         if (fechaHasta) {
-          where.fecha['$lte'] = new Date(fechaHasta + 'T23:59:59.999Z');
+          where.fecha[Op.lte] = new Date(fechaHasta + 'T23:59:59');
         }
       }
   

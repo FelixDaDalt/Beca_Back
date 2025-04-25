@@ -34,12 +34,18 @@ const listadoAutorizados = async (id_colegio) => {
     try {
         const listado = await autorizados_1.autorizados.findAll({
             where: {
-                id_colegio: id_colegio,
+                id_colegio,
                 borrado: 0,
             },
-            attributes: { exclude: ['borrado'] },
+            attributes: {
+                exclude: ['borrado'],
+            }
         });
-        return listado;
+        return listado.map(a => {
+            const json = a.toJSON();
+            json.disponible = json.cantidad - json.utilizadas;
+            return json;
+        });
     }
     catch (error) {
         throw error;
@@ -48,19 +54,23 @@ const listadoAutorizados = async (id_colegio) => {
 exports.listadoAutorizados = listadoAutorizados;
 const obtenerAutorizado = async (idAutorizado) => {
     try {
-        const autorizadoExistente = await autorizados_1.autorizados.findOne({
-            where: [{
-                    id: idAutorizado,
-                    borrado: 0
-                }],
-            attributes: { exclude: ['borrado'] }
+        const autorizado = await autorizados_1.autorizados.findOne({
+            where: {
+                id: idAutorizado,
+                borrado: 0,
+            },
+            attributes: {
+                exclude: ['borrado'],
+            }
         });
-        if (!autorizadoExistente) {
+        if (!autorizado) {
             const error = new Error('Usuario inexistente');
             error.statusCode = 400;
             throw error;
         }
-        return autorizadoExistente;
+        const json = autorizado.toJSON();
+        json.disponible = json.cantidad - json.utilizadas;
+        return json;
     }
     catch (error) {
         throw error;

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.zona_localidad = exports.zona = exports.usuario = exports.tyc = exports.roles = exports.reporte_error = exports.red_colegio = exports.red = exports.plan = exports.parametros = exports.notificaciones = exports.menu = exports.forma_pago = exports.colegio = exports.beca_solicitud = exports.beca_resolucion = exports.beca_estado = exports.beca_automatizacion_log = exports.beca_automatizacion_ejecucion = exports.beca = exports.autorizados = exports.administrador = exports.actividad_log = void 0;
+exports.zona_localidad = exports.zona = exports.usuario = exports.tyc = exports.roles = exports.reporte_error = exports.red_colegio = exports.red = exports.plan = exports.parametros = exports.notificaciones = exports.forma_pago = exports.colegio = exports.beca_solicitud = exports.beca_resolucion = exports.beca_estado = exports.beca_automatizacion_log = exports.beca_automatizacion_ejecucion = exports.beca = exports.autorizados = exports.administrador = exports.actividad_log = void 0;
 exports.initModels = initModels;
 const actividad_log_1 = require("./actividad_log");
 Object.defineProperty(exports, "actividad_log", { enumerable: true, get: function () { return actividad_log_1.actividad_log; } });
@@ -24,8 +24,6 @@ const colegio_1 = require("./colegio");
 Object.defineProperty(exports, "colegio", { enumerable: true, get: function () { return colegio_1.colegio; } });
 const forma_pago_1 = require("./forma_pago");
 Object.defineProperty(exports, "forma_pago", { enumerable: true, get: function () { return forma_pago_1.forma_pago; } });
-const menu_1 = require("./menu");
-Object.defineProperty(exports, "menu", { enumerable: true, get: function () { return menu_1.menu; } });
 const notificaciones_1 = require("./notificaciones");
 Object.defineProperty(exports, "notificaciones", { enumerable: true, get: function () { return notificaciones_1.notificaciones; } });
 const parametros_1 = require("./parametros");
@@ -60,7 +58,6 @@ function initModels(sequelize) {
     const beca_solicitud = beca_solicitud_1.beca_solicitud.initModel(sequelize);
     const colegio = colegio_1.colegio.initModel(sequelize);
     const forma_pago = forma_pago_1.forma_pago.initModel(sequelize);
-    const menu = menu_1.menu.initModel(sequelize);
     const notificaciones = notificaciones_1.notificaciones.initModel(sequelize);
     const parametros = parametros_1.parametros.initModel(sequelize);
     const plan = plan_1.plan.initModel(sequelize);
@@ -76,6 +73,8 @@ function initModels(sequelize) {
     red.belongsToMany(colegio, { as: 'id_colegio_colegios', through: red_colegio, foreignKey: "id_red", otherKey: "id_colegio" });
     actividad_log.belongsTo(administrador, { as: "admin", foreignKey: "admin_id" });
     administrador.hasMany(actividad_log, { as: "actividad_logs", foreignKey: "admin_id" });
+    beca_solicitud.belongsTo(autorizados, { as: "id_pariente_autorizado", foreignKey: "id_pariente" });
+    autorizados.hasMany(beca_solicitud, { as: "beca_solicituds", foreignKey: "id_pariente" });
     beca_solicitud.belongsTo(beca, { as: "id_beca_beca", foreignKey: "id_beca" });
     beca.hasMany(beca_solicitud, { as: "beca_solicituds", foreignKey: "id_beca" });
     beca_automatizacion_log.belongsTo(beca_automatizacion_ejecucion, { as: "id_ejecucion_beca_automatizacion_ejecucion", foreignKey: "id_ejecucion" });
@@ -124,8 +123,6 @@ function initModels(sequelize) {
     usuario.hasMany(beca_solicitud, { as: "id_usuario_reso_beca_solicituds", foreignKey: "id_usuario_reso" });
     beca_solicitud.belongsTo(usuario, { as: "id_usuario_baja_usuario", foreignKey: "id_usuario_baja" });
     usuario.hasMany(beca_solicitud, { as: "id_usuario_baja_beca_solicituds", foreignKey: "id_usuario_baja" });
-    beca_solicitud.belongsTo(usuario, { as: "id_pariente_usuario", foreignKey: "id_pariente" });
-    usuario.hasMany(beca_solicitud, { as: "id_pariente_beca_solicituds", foreignKey: "id_pariente" });
     reporte_error.belongsTo(usuario, { as: "id_usuario_usuario", foreignKey: "id_usuario" });
     usuario.hasMany(reporte_error, { as: "reporte_errors", foreignKey: "id_usuario" });
     zona_localidad.belongsTo(zona, { as: "id_zona_zona", foreignKey: "id_zona" });
@@ -144,7 +141,6 @@ function initModels(sequelize) {
         beca_solicitud: beca_solicitud,
         colegio: colegio,
         forma_pago: forma_pago,
-        menu: menu,
         notificaciones: notificaciones,
         parametros: parametros,
         plan: plan,

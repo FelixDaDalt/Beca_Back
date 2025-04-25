@@ -4,6 +4,7 @@ import type { actividad_log, actividad_logId } from './actividad_log';
 import type { beca, becaId } from './beca';
 import type { beca_solicitud, beca_solicitudId } from './beca_solicitud';
 import type { colegio, colegioId } from './colegio';
+import type { reporte_error, reporte_errorId } from './reporte_error';
 import type { roles, rolesId } from './roles';
 
 export interface usuarioAttributes {
@@ -116,6 +117,18 @@ export class usuario extends Model<usuarioAttributes, usuarioCreationAttributes>
   hasId_usuario_baja_beca_solicitud!: Sequelize.HasManyHasAssociationMixin<beca_solicitud, beca_solicitudId>;
   hasId_usuario_baja_beca_solicituds!: Sequelize.HasManyHasAssociationsMixin<beca_solicitud, beca_solicitudId>;
   countId_usuario_baja_beca_solicituds!: Sequelize.HasManyCountAssociationsMixin;
+  // usuario hasMany reporte_error via id_usuario
+  reporte_errors!: reporte_error[];
+  getReporte_errors!: Sequelize.HasManyGetAssociationsMixin<reporte_error>;
+  setReporte_errors!: Sequelize.HasManySetAssociationsMixin<reporte_error, reporte_errorId>;
+  addReporte_error!: Sequelize.HasManyAddAssociationMixin<reporte_error, reporte_errorId>;
+  addReporte_errors!: Sequelize.HasManyAddAssociationsMixin<reporte_error, reporte_errorId>;
+  createReporte_error!: Sequelize.HasManyCreateAssociationMixin<reporte_error>;
+  removeReporte_error!: Sequelize.HasManyRemoveAssociationMixin<reporte_error, reporte_errorId>;
+  removeReporte_errors!: Sequelize.HasManyRemoveAssociationsMixin<reporte_error, reporte_errorId>;
+  hasReporte_error!: Sequelize.HasManyHasAssociationMixin<reporte_error, reporte_errorId>;
+  hasReporte_errors!: Sequelize.HasManyHasAssociationsMixin<reporte_error, reporte_errorId>;
+  countReporte_errors!: Sequelize.HasManyCountAssociationsMixin;
 
   static initModel(sequelize: Sequelize.Sequelize): typeof usuario {
     return usuario.init({

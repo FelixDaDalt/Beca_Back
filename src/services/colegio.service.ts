@@ -513,8 +513,9 @@ const borrarColegio = async (idColegio: string,idUsuario:number, transaction:Tra
                                 solicitud.res_comentario = "Colegio Borrado"
                                 solicitud.id_usuario_reso = admin
                                 await solicitud.save({transaction})
+                                const idPariente = solicitud.id_pariente
 
-                                await BecaService.desestimarBeca(solicitud.id_colegio_solic,idColegio,beca.id_red,transaction)
+                                await BecaService.desestimarBeca(solicitud.id_colegio_solic,idColegio,beca.id_red,idPariente,transaction)
                             }
                         }
                     }
@@ -533,8 +534,9 @@ const borrarColegio = async (idColegio: string,idUsuario:number, transaction:Tra
                         solicitud.res_comentario = "Colegio Borrado"
                         solicitud.id_usuario_reso = admin
                         await solicitud.save({transaction})
+                        const idPariente = solicitud.id_pariente
 
-                        await BecaService.desestimarBeca(idColegio,solicitud.id_beca_beca.id_colegio,solicitud.id_beca_beca.id_red,transaction)
+                        await BecaService.desestimarBeca(idColegio,solicitud.id_beca_beca.id_colegio,solicitud.id_beca_beca.id_red,idPariente,transaction)
 
                         
                     }

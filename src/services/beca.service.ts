@@ -12,6 +12,7 @@ import { zona_localidad } from "../models/zona_localidad";
 import { zona } from "../models/zona";
 import { BecaService } from "./matrices.service";
 import { notificaciones } from "../models/notificaciones";
+import { autorizados } from "../models/autorizados";
 
 
 
@@ -236,6 +237,47 @@ const solicitarBeca = async (solicitud: Solicitud, idRed: string, idUsuario: str
             throw error;
         }
 
+        // Verifica que todos los parientes tengan disponibilidad
+        const parienteIds = solicitud.alumnos.map(a => a.id_pariente ?? Number(idUsuario));
+
+        const parientesUnicos = [...new Set(parienteIds)];
+
+        const parientes = await autorizados.findAll({
+        where: {
+            id_colegio: idColegio,
+            id: parientesUnicos,
+            borrado: 0
+        },
+        transaction
+        });
+
+        const parientesMap = new Map(parientes.map(p => [p.id, p]));
+        const contadorParientes = new Map<number, number>();
+        for (const id of parienteIds) {
+        contadorParientes.set(id, (contadorParientes.get(id) ?? 0) + 1);
+        }
+
+        // Validar contra la disponibilidad real
+        for (const [id, cantidadSolicitudes] of contadorParientes.entries()) {
+            const pariente = parientesMap.get(id);
+          
+            if (!pariente) {
+              const error = new Error(`No se encontró el pariente con ID ${id}.`);
+              (error as any).statusCode = 400;
+              throw error;
+            }
+          
+            const disponible = (pariente.cantidad ?? 0) - (pariente.utilizadas ?? 0);
+          
+            if (disponible < cantidadSolicitudes) {
+              const error = new Error(
+                `El pariente ${pariente.apellido}, ${pariente.nombre} tiene ${disponible} beca(s) disponible(s), pero se intentan usar ${cantidadSolicitudes}.`
+              );
+              (error as any).statusCode = 400;
+              throw error;
+            }
+          }
+
         // Crear las solicitudes para cada alumno
         const solicitudes = solicitud.alumnos.map(alumno => ({
             id_beca: solicitud.id_beca,
@@ -250,11 +292,13 @@ const solicitarBeca = async (solicitud: Solicitud, idRed: string, idUsuario: str
             id_pariente: alumno.id_pariente ? alumno.id_pariente : Number(idUsuario)
         }));
 
+        
+
         // Inserta todas las solicitudes de una sola vez y devuelve las creadas
         const solicitudesCreadas = await beca_solicitud.bulkCreate(solicitudes, { transaction, returning: true });
 
         // Usa BecaService para actualizar las matrices
-        await BecaService.solicitarBeca(Number(idColegio), becaSolicitada.id_colegio, solicitudes.length, Number(idRed), transaction);
+        await BecaService.solicitarBeca(Number(idColegio), becaSolicitada.id_colegio, solicitudes.length, Number(idRed), contadorParientes, transaction);
 
         // Crear notificaciones en una sola operación con bulkCreate
         const notificacionesData = solicitudesCreadas.map(sol => ({
@@ -649,7 +693,7 @@ const miSolicitudDetalle = async (
                     required: false,
                 },
                 {
-                    model:usuario,
+                    model:autorizados,
                     as:'id_pariente_autorizado',
                     attributes: ['nombre', 'apellido'],
                     required:true
@@ -727,6 +771,7 @@ const miSolicitudDetalle = async (
 
 
 
+// ACEPTAR O RECHAZAR //
 const resolverSolicitud = async (
     resolver: { id_solicitud: string; id_resolucion: number; res_comentario: string },
     idRed: string,
@@ -803,7 +848,9 @@ const resolverSolicitud = async (
                 { transaction }
             );
 
-            await BecaService.rechazarBeca(solicitud.id_colegio_solic,idColegio,idRed,transaction)
+            const idPariente = solicitud.id_pariente;
+
+            await BecaService.rechazarBeca(solicitud.id_colegio_solic,idColegio,idRed,idPariente,transaction)
         }
 
         await notificaciones.update(
@@ -825,7 +872,9 @@ const resolverSolicitud = async (
         throw error;
     }
 };
+///////////////////////
 
+// DESESTIMO UNA BECA //
 const desestimarSolicitud = async (
     desestimar: { id_solicitud: string; res_comentario: string },
     idRed: string,
@@ -889,7 +938,9 @@ const desestimarSolicitud = async (
                 { transaction }
             );
 
-            await BecaService.desestimarBeca(idColegio,solicitud.id_beca_beca.id_colegio,idRed,transaction)
+            const idPariente = solicitud.id_pariente
+
+            await BecaService.desestimarBeca(idColegio,solicitud.id_beca_beca.id_colegio,idRed,idPariente,transaction)
 
             await notificaciones.update(
                 {
@@ -910,6 +961,7 @@ const desestimarSolicitud = async (
         throw error;
     }
 };
+///////////////////////
 
 const darBajaSolicitud = async (
     desestimar: { id_solicitud: string; baja_comentario: string },

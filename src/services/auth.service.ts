@@ -69,7 +69,7 @@ const login = async (login: nuevoLogin, tipo: string, ip: string, navegador: str
             : null;
         
         const superAdmin = tipo === 'administrador' && 'superAdmin' in usuarioExistente
-            ? usuarioExistente.superAdmin
+            ? usuarioExistente.superAdmin || null
             : null
 
         // 4. Generar el token JWT

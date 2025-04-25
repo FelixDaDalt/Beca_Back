@@ -1,12 +1,9 @@
-import { encriptar } from "../utils/password.handle";
-import { usuario } from "../models/usuario";
-import sequelize from "../config/database";
-import { Op, Transaction } from "sequelize";
+import { literal, Op, Transaction } from "sequelize";
 import { autorizados } from "../models/autorizados";
 
 
 
-const altaAutorizado = async (idColegio:number, nuevoAutorizado: usuario,transaction:Transaction) => {
+const altaAutorizado = async (idColegio:number, nuevoAutorizado: autorizados,transaction:Transaction) => {
 
     try {
         // 1. Verificar si el usuario existe por DNI
@@ -43,45 +40,56 @@ const altaAutorizado = async (idColegio:number, nuevoAutorizado: usuario,transac
     }
 };
 
-const listadoAutorizados = async (id_colegio:number) => {
+const listadoAutorizados = async (id_colegio: number) => {
     try {
         const listado = await autorizados.findAll({
             where: {
-                id_colegio:id_colegio,
-                borrado: 0,
+              id_colegio,
+              borrado: 0,
             },
-            attributes: { exclude: ['borrado'] },
-        });
-
-        return listado;
+            attributes: {
+              exclude: ['borrado'],
+            }
+          });
+          
+          return listado.map(a => {
+            const json = a.toJSON() as any;
+            json.disponible = json.cantidad - json.utilizadas;
+            return json;
+          });
+  
     } catch (error) {
-        throw error;
+      throw error;
     }
-};
+  };
 
-const obtenerAutorizado = async (idAutorizado:string) => {
+
+  const obtenerAutorizado = async (idAutorizado: string) => {
     try {
-
-        const autorizadoExistente = await autorizados.findOne({
-            where:[{
-                id:idAutorizado,
-                borrado:0
-            }],
-            attributes:{exclude:['borrado']}
-        });
-
-        if (!autorizadoExistente) {
-            const error = new Error('Usuario inexistente');
-            (error as any).statusCode = 400;
-            throw error;
+      const autorizado = await autorizados.findOne({
+        where: {
+          id: idAutorizado,
+          borrado: 0,
+        },
+        attributes: {
+          exclude: ['borrado'],
         }
-
-        return autorizadoExistente
-        
-    } catch (error) {
+      });
+  
+      if (!autorizado) {
+        const error = new Error('Usuario inexistente');
+        (error as any).statusCode = 400;
         throw error;
+      }
+  
+      const json = autorizado.toJSON() as any;
+      json.disponible = json.cantidad - json.utilizadas;
+  
+      return json;
+    } catch (error) {
+      throw error;
     }
-};
+  };
 
 const editarAutorizado = async (update:autorizados, idUsuario:number, idRol:number, transaction:Transaction, idColegio?:number) => {
     try {

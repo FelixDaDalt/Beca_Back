@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BecaService = void 0;
+const autorizados_1 = require("../models/autorizados");
 const database_1 = __importDefault(require("../config/database"));
 const red_colegio_1 = require("../models/red_colegio");
 class BecaService {
@@ -28,7 +29,7 @@ class BecaService {
      * - Recalcula `dbd` en el colegio solicitante.
      * - Recalcula `bde` en el colegio solicitado.
      */
-    static async solicitarBeca(idColegioSolicitante, idColegioSolicitado, cantidad, idRed, transaction) {
+    static async solicitarBeca(idColegioSolicitante, idColegioSolicitado, cantidad, idRed, parientesUsados, transaction) {
         try {
             // Incrementa `dbu` en el colegio solicitante
             await red_colegio_1.red_colegio.increment({ dbu: cantidad }, { where: { id_colegio: idColegioSolicitante, id_red: idRed }, transaction });
@@ -38,6 +39,10 @@ class BecaService {
             await red_colegio_1.red_colegio.increment({ bsp: cantidad }, { where: { id_colegio: idColegioSolicitado, id_red: idRed }, transaction });
             // Recalcula `bde`
             await this.actualizarBDE(idColegioSolicitado, idRed, transaction);
+            // Incrementa `utilizadas` id_pariente (autorizados)
+            for (const [idPariente, cantidad] of parientesUsados.entries()) {
+                await autorizados_1.autorizados.increment({ utilizadas: cantidad }, { where: { id: idPariente }, transaction });
+            }
         }
         catch (error) {
             throw new Error(`Error al actualizar matrices: ${error.message}`);
@@ -67,12 +72,14 @@ class BecaService {
      * - Recalcula `dbd` en el colegio solicitante.
      * - Recalcula `bde` en el colegio solicitado.
      */
-    static async rechazarBeca(colegioSolicitante, colegioSolicitado, idRed, transaction) {
+    static async rechazarBeca(colegioSolicitante, colegioSolicitado, idRed, idPariente, transaction) {
         try {
             await red_colegio_1.red_colegio.decrement({ dbu: 1 }, { where: { id_colegio: colegioSolicitante, id_red: idRed }, transaction });
             await this.actualizarDBD(colegioSolicitante, idRed, transaction);
             await red_colegio_1.red_colegio.decrement({ bsp: 1 }, { where: { id_colegio: colegioSolicitado, id_red: idRed }, transaction });
             await this.actualizarBDE(colegioSolicitado, idRed, transaction);
+            // Decrement `utilizadas` id_pariente (autorizados)
+            await autorizados_1.autorizados.decrement({ utilizadas: 1 }, { where: { id: idPariente }, transaction });
         }
         catch (error) {
             console.error("Error al rechazar la beca:", error);
@@ -86,12 +93,13 @@ class BecaService {
       * - Recalcula `dbd` en el colegio solicitante.
       * - Recalcula `bde` en el colegio solicitado.
       */
-    static async desestimarBeca(colegioSolicitante, colegioSolicitado, idRed, transaction) {
+    static async desestimarBeca(colegioSolicitante, colegioSolicitado, idRed, idPariente, transaction) {
         try {
             await red_colegio_1.red_colegio.decrement({ dbu: 1 }, { where: { id_colegio: colegioSolicitante, id_red: idRed }, transaction });
             await this.actualizarDBD(colegioSolicitante, idRed, transaction);
             await red_colegio_1.red_colegio.decrement({ bsp: 1 }, { where: { id_colegio: colegioSolicitado, id_red: idRed }, transaction });
             await this.actualizarBDE(colegioSolicitado, idRed, transaction);
+            await autorizados_1.autorizados.decrement({ utilizadas: 1 }, { where: { id: idPariente }, transaction });
         }
         catch (error) {
             console.error("Error al desestimar beca:", error);

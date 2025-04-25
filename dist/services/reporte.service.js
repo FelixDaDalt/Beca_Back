@@ -2,7 +2,9 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.borrarReporte = exports.listadoReportes = exports.nuevoReporte = void 0;
 const usuario_1 = require("../models/usuario");
+const sequelize_1 = require("sequelize");
 const reporte_error_1 = require("../models/reporte_error");
+const colegio_1 = require("../models/colegio");
 const nuevoReporte = async (idUsuario, nuevoReporte, transaction) => {
     try {
         // 1. Verificar si el usuario existe por DNI
@@ -32,14 +34,14 @@ const listadoReportes = async (filtro = {}) => {
     try {
         const { page = 1, pageSize = 10, fechaDesde, fechaHasta } = filtro;
         const where = {};
-        // 🎯 Filtro de fecha (usando "fecha" en lugar de "createdAt")
+        // 🎯 Filtro de fecha (más preciso)
         if (fechaDesde || fechaHasta) {
             where.fecha = {};
             if (fechaDesde) {
-                where.fecha['$gte'] = new Date(fechaDesde + 'T00:00:00.000Z');
+                where.fecha[sequelize_1.Op.gte] = new Date(fechaDesde + 'T00:00:00');
             }
             if (fechaHasta) {
-                where.fecha['$lte'] = new Date(fechaHasta + 'T23:59:59.999Z');
+                where.fecha[sequelize_1.Op.lte] = new Date(fechaHasta + 'T23:59:59');
             }
         }
         const reportesEncontrados = await reporte_error_1.reporte_error.findAndCountAll({
@@ -47,9 +49,16 @@ const listadoReportes = async (filtro = {}) => {
             include: [{
                     model: usuario_1.usuario,
                     as: 'id_usuario_usuario',
-                    required: false
+                    required: false,
+                    attributes: ['email', 'nombre', 'apellido'],
+                    include: [{
+                            model: colegio_1.colegio,
+                            as: 'id_colegio_colegio',
+                            required: false,
+                            attributes: ['nombre'],
+                        }]
                 }],
-            order: [['fecha', 'DESC']], // 🔥 Ordenado por fecha (más nueva primero)
+            order: [['fecha', 'DESC']],
             limit: pageSize,
             offset: (page - 1) * pageSize
         });

@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.obtenerEjecuciones = void 0;
+const sequelize_1 = require("sequelize");
 const beca_automatizacion_ejecucion_1 = require("../models/beca_automatizacion_ejecucion");
 const beca_automatizacion_log_1 = require("../models/beca_automatizacion_log");
 const obtenerEjecuciones = async (filtro = {}) => {
@@ -11,10 +12,10 @@ const obtenerEjecuciones = async (filtro = {}) => {
         if (fechaDesde || fechaHasta) {
             where.fecha = {};
             if (fechaDesde) {
-                where.fecha['$gte'] = new Date(fechaDesde + 'T00:00:00.000Z');
+                where.fecha[sequelize_1.Op.gte] = new Date(fechaDesde + 'T00:00:00');
             }
             if (fechaHasta) {
-                where.fecha['$lte'] = new Date(fechaHasta + 'T23:59:59.999Z');
+                where.fecha[sequelize_1.Op.lte] = new Date(fechaHasta + 'T23:59:59');
             }
         }
         // 🎯 Filtro de tipos

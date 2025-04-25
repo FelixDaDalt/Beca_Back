@@ -22,6 +22,7 @@ const notificaciones_1 = require("../models/notificaciones");
 const beca_automatizacion_ejecucion_1 = require("../models/beca_automatizacion_ejecucion");
 const red_1 = require("../models/red");
 const parametros_1 = require("../models/parametros");
+const autorizados_1 = require("../models/autorizados");
 // 🎯 Becas Vencidas
 async function notificarBecasVencidas() {
     console.log("🔎 1 - Verificando becas vencidas...");
@@ -72,7 +73,20 @@ async function notificarBecasVencidas() {
         await beca_solicitud_1.beca_solicitud.update({ id_estado: 4, id_resolucion: 3, notificarVencida: 1 }, { where: { id: becasVencidas.map(b => b.id) }, transaction: t });
         await notificaciones_1.notificaciones.update({ vencida: 1, leido_ofer: 0, leido_solic: 0 }, { where: { id_solicitud: becasVencidas.map(b => b.id) }, transaction: t });
         await actualizarRedColegiosVencimientoSQL(becasVencidas, t);
-        console.log("⏳ 4 - Registrando logs de becas...");
+        console.log("⏳ 4 - Actualizando utilizadas de parientes...");
+        // 🔄 Contador por id_pariente
+        const contadorParientes = new Map();
+        for (const beca of becasVencidas) {
+            const idPariente = beca.id_pariente;
+            if (!idPariente)
+                continue; // por si algún registro no tiene pariente
+            contadorParientes.set(idPariente, (contadorParientes.get(idPariente) ?? 0) + 1);
+        }
+        // 🔧 Ejecutar los updates en la tabla "autorizado"
+        for (const [idPariente, cantidad] of contadorParientes.entries()) {
+            await autorizados_1.autorizados.decrement({ utilizadas: cantidad }, { where: { id: idPariente }, transaction: t });
+        }
+        console.log("⏳ 5 - Registrando logs de becas...");
         const logs = becasVencidas.map(beca => ({
             id_beca_solicitud: beca.id,
             id_estado_anterior: 0,
@@ -222,7 +236,18 @@ async function procesarBecasDadaBaja() {
         console.log("⏳ 4 - Actualizando estados y red_colegio...");
         await beca_solicitud_1.beca_solicitud.update({ id_estado: 6 }, { where: { id_estado: 3 }, transaction: t });
         await actualizarRedColegiosBajaSQL(becasPendientes, t);
-        console.log("⏳ 5 - Registrando logs...");
+        console.log("⏳ 5 - Actualizando utilizadas de parientes...");
+        const contadorParientes = new Map();
+        for (const beca of becasPendientes) {
+            const idPariente = beca.id_pariente;
+            if (!idPariente)
+                continue;
+            contadorParientes.set(idPariente, (contadorParientes.get(idPariente) ?? 0) + 1);
+        }
+        for (const [idPariente, cantidad] of contadorParientes.entries()) {
+            await autorizados_1.autorizados.decrement({ utilizadas: cantidad }, { where: { id: idPariente }, transaction: t });
+        }
+        console.log("⏳ 6 - Registrando logs...");
         await beca_automatizacion_log_1.beca_automatizacion_log.bulkCreate(becasPendientes.map(({ id, id_colegio_solic, id_beca_beca }) => ({
             id_beca_solicitud: id,
             id_estado_anterior: 3,

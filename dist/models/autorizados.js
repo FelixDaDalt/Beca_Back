@@ -55,6 +55,16 @@ class autorizados extends sequelize_1.Model {
                 type: sequelize_1.DataTypes.BOOLEAN,
                 allowNull: true,
                 defaultValue: 0
+            },
+            cantidad: {
+                type: sequelize_1.DataTypes.INTEGER,
+                allowNull: true,
+                defaultValue: 0
+            },
+            utilizadas: {
+                type: sequelize_1.DataTypes.INTEGER,
+                allowNull: true,
+                defaultValue: 0
             }
         }, {
             sequelize,

@@ -14,6 +14,7 @@ const zona_localidad_1 = require("../models/zona_localidad");
 const zona_1 = require("../models/zona");
 const matrices_service_1 = require("./matrices.service");
 const notificaciones_1 = require("../models/notificaciones");
+const autorizados_1 = require("../models/autorizados");
 const listadoBecas = async (idRed, idColegio, rol, transaction) => {
     try {
         if (rol != 0) {
@@ -198,6 +199,37 @@ const solicitarBeca = async (solicitud, idRed, idUsuario, idColegio, transaction
             error.statusCode = 400;
             throw error;
         }
+        // Verifica que todos los parientes tengan disponibilidad
+        const parienteIds = solicitud.alumnos.map(a => a.id_pariente ?? Number(idUsuario));
+        const parientesUnicos = [...new Set(parienteIds)];
+        const parientes = await autorizados_1.autorizados.findAll({
+            where: {
+                id_colegio: idColegio,
+                id: parientesUnicos,
+                borrado: 0
+            },
+            transaction
+        });
+        const parientesMap = new Map(parientes.map(p => [p.id, p]));
+        const contadorParientes = new Map();
+        for (const id of parienteIds) {
+            contadorParientes.set(id, (contadorParientes.get(id) ?? 0) + 1);
+        }
+        // Validar contra la disponibilidad real
+        for (const [id, cantidadSolicitudes] of contadorParientes.entries()) {
+            const pariente = parientesMap.get(id);
+            if (!pariente) {
+                const error = new Error(`No se encontró el pariente con ID ${id}.`);
+                error.statusCode = 400;
+                throw error;
+            }
+            const disponible = (pariente.cantidad ?? 0) - (pariente.utilizadas ?? 0);
+            if (disponible < cantidadSolicitudes) {
+                const error = new Error(`El pariente ${pariente.apellido}, ${pariente.nombre} tiene ${disponible} beca(s) disponible(s), pero se intentan usar ${cantidadSolicitudes}.`);
+                error.statusCode = 400;
+                throw error;
+            }
+        }
         // Crear las solicitudes para cada alumno
         const solicitudes = solicitud.alumnos.map(alumno => ({
             id_beca: solicitud.id_beca,
@@ -214,7 +246,7 @@ const solicitarBeca = async (solicitud, idRed, idUsuario, idColegio, transaction
         // Inserta todas las solicitudes de una sola vez y devuelve las creadas
         const solicitudesCreadas = await beca_solicitud_1.beca_solicitud.bulkCreate(solicitudes, { transaction, returning: true });
         // Usa BecaService para actualizar las matrices
-        await matrices_service_1.BecaService.solicitarBeca(Number(idColegio), becaSolicitada.id_colegio, solicitudes.length, Number(idRed), transaction);
+        await matrices_service_1.BecaService.solicitarBeca(Number(idColegio), becaSolicitada.id_colegio, solicitudes.length, Number(idRed), contadorParientes, transaction);
         // Crear notificaciones en una sola operación con bulkCreate
         const notificacionesData = solicitudesCreadas.map(sol => ({
             id_solicitud: sol.id,
@@ -574,8 +606,8 @@ const miSolicitudDetalle = async (idSolicitud, idRed, idColegio, idRol, idUsuari
                     required: false,
                 },
                 {
-                    model: usuario_1.usuario,
-                    as: 'id_pariente_usuario',
+                    model: autorizados_1.autorizados,
+                    as: 'id_pariente_autorizado',
                     attributes: ['nombre', 'apellido'],
                     required: true
                 },
@@ -617,7 +649,7 @@ const miSolicitudDetalle = async (idSolicitud, idRed, idColegio, idRol, idUsuari
             },
             solicitante: {
                 usuario: solicitud?.id_usuario_solic_usuario,
-                pariente: solicitud?.id_pariente_usuario.apellido + ', ' + solicitud?.id_pariente_usuario.nombre,
+                pariente: solicitud?.id_pariente_autorizado.apellido + ', ' + solicitud?.id_pariente_autorizado.nombre,
             },
             solicitud: {
                 colegio: solicitud?.id_beca_beca.id_colegio_colegio
@@ -643,6 +675,7 @@ const miSolicitudDetalle = async (idSolicitud, idRed, idColegio, idRol, idUsuari
     }
 };
 exports.miSolicitudDetalle = miSolicitudDetalle;
+// ACEPTAR O RECHAZAR //
 const resolverSolicitud = async (resolver, idRed, idUsuario, idColegio, transaction) => {
     try {
         const estadoAprobada = 5;
@@ -701,7 +734,8 @@ const resolverSolicitud = async (resolver, idRed, idUsuario, idColegio, transact
                 res_comentario: resolver.res_comentario,
                 sinLeerSolicitante: 1
             }, { transaction });
-            await matrices_service_1.BecaService.rechazarBeca(solicitud.id_colegio_solic, idColegio, idRed, transaction);
+            const idPariente = solicitud.id_pariente;
+            await matrices_service_1.BecaService.rechazarBeca(solicitud.id_colegio_solic, idColegio, idRed, idPariente, transaction);
         }
         await notificaciones_1.notificaciones.update({
             leido_solic: 0,
@@ -719,6 +753,8 @@ const resolverSolicitud = async (resolver, idRed, idUsuario, idColegio, transact
     }
 };
 exports.resolverSolicitud = resolverSolicitud;
+///////////////////////
+// DESESTIMO UNA BECA //
 const desestimarSolicitud = async (desestimar, idRed, idUsuario, idColegio, idRol, transaction) => {
     try {
         const whereCondition = {
@@ -766,7 +802,8 @@ const desestimarSolicitud = async (desestimar, idRed, idUsuario, idColegio, idRo
             res_comentario: desestimar.res_comentario,
             sinLeer: 1
         }, { transaction });
-        await matrices_service_1.BecaService.desestimarBeca(idColegio, solicitud.id_beca_beca.id_colegio, idRed, transaction);
+        const idPariente = solicitud.id_pariente;
+        await matrices_service_1.BecaService.desestimarBeca(idColegio, solicitud.id_beca_beca.id_colegio, idRed, idPariente, transaction);
         await notificaciones_1.notificaciones.update({
             leido_ofer: 0,
             desestimada: 1,
@@ -783,6 +820,7 @@ const desestimarSolicitud = async (desestimar, idRed, idUsuario, idColegio, idRo
     }
 };
 exports.desestimarSolicitud = desestimarSolicitud;
+///////////////////////
 const darBajaSolicitud = async (desestimar, idRed, idUsuario, idColegio, idRol, transaction) => {
     try {
         if (parseInt(idRol) > 2) {

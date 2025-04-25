@@ -14,11 +14,13 @@ export interface autorizadosAttributes {
   email?: string;
   borrado?: number;
   suspendido?: number;
+  cantidad?: number;
+  utilizadas?: number;
 }
 
 export type autorizadosPk = "id";
 export type autorizadosId = autorizados[autorizadosPk];
-export type autorizadosOptionalAttributes = "id" | "telefono" | "celular" | "email" | "borrado" | "suspendido";
+export type autorizadosOptionalAttributes = "id" | "telefono" | "celular" | "email" | "borrado" | "suspendido" | "cantidad" | "utilizadas";
 export type autorizadosCreationAttributes = Optional<autorizadosAttributes, autorizadosOptionalAttributes>;
 
 export class autorizados extends Model<autorizadosAttributes, autorizadosCreationAttributes> implements autorizadosAttributes {
@@ -32,6 +34,8 @@ export class autorizados extends Model<autorizadosAttributes, autorizadosCreatio
   email?: string;
   borrado?: number;
   suspendido?: number;
+  cantidad?: number;
+  utilizadas?: number;
 
   // autorizados hasMany beca_solicitud via id_pariente
   beca_solicituds!: beca_solicitud[];
@@ -101,6 +105,16 @@ export class autorizados extends Model<autorizadosAttributes, autorizadosCreatio
     },
     suspendido: {
       type: DataTypes.BOOLEAN,
+      allowNull: true,
+      defaultValue: 0
+    },
+    cantidad: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: 0
+    },
+    utilizadas: {
+      type: DataTypes.INTEGER,
       allowNull: true,
       defaultValue: 0
     }

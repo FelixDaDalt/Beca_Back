@@ -1,6 +1,7 @@
 import { usuario } from "../models/usuario";
 import { Op, Transaction } from "sequelize";
 import { reporte_error } from "../models/reporte_error";
+import { colegio } from "../models/colegio";
 
 interface FiltroEjecucion {
     page?: number;
@@ -48,25 +49,34 @@ const listadoReportes = async (filtro: FiltroEjecucion = {}) => {
   
       const where: any = {};
   
-      // 🎯 Filtro de fecha (usando "fecha" en lugar de "createdAt")
+      // 🎯 Filtro de fecha (más preciso)
       if (fechaDesde || fechaHasta) {
         where.fecha = {};
+  
         if (fechaDesde) {
-          where.fecha['$gte'] = new Date(fechaDesde + 'T00:00:00.000Z');
+          where.fecha[Op.gte] = new Date(fechaDesde + 'T00:00:00');
         }
+  
         if (fechaHasta) {
-          where.fecha['$lte'] = new Date(fechaHasta + 'T23:59:59.999Z');
+          where.fecha[Op.lte] = new Date(fechaHasta + 'T23:59:59');
         }
       }
-    
+  
       const reportesEncontrados = await reporte_error.findAndCountAll({
         where,
         include:[{
-            model:usuario,
-            as:'id_usuario_usuario',
-            required:false
+            model: usuario,
+            as: 'id_usuario_usuario',
+            required: false,
+            attributes: ['email', 'nombre', 'apellido'],
+            include: [{
+                model: colegio,
+                as: 'id_colegio_colegio',
+                required: false,
+                attributes: ['nombre'],
+            }]
         }],
-        order: [['fecha', 'DESC']], // 🔥 Ordenado por fecha (más nueva primero)
+        order: [['fecha', 'DESC']],
         limit: pageSize,
         offset: (page - 1) * pageSize
       });

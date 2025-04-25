@@ -60,7 +60,7 @@ const login = async (login, tipo, ip, navegador) => {
             ? usuarioExistente.id_colegio
             : null;
         const superAdmin = tipo === 'administrador' && 'superAdmin' in usuarioExistente
-            ? usuarioExistente.superAdmin
+            ? usuarioExistente.superAdmin || null
             : null;
         // 4. Generar el token JWT
         const token = await (0, jw_handle_1.generarToken)(usuarioExistente.id, usuarioExistente.id_rol, usuarioExistente.dni, id_colegio, superAdmin);

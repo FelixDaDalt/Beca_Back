@@ -456,7 +456,8 @@ const borrarColegio = async (idColegio, idUsuario, transaction) => {
                             solicitud.res_comentario = "Colegio Borrado";
                             solicitud.id_usuario_reso = admin;
                             await solicitud.save({ transaction });
-                            await matrices_service_1.BecaService.desestimarBeca(solicitud.id_colegio_solic, idColegio, beca.id_red, transaction);
+                            const idPariente = solicitud.id_pariente;
+                            await matrices_service_1.BecaService.desestimarBeca(solicitud.id_colegio_solic, idColegio, beca.id_red, idPariente, transaction);
                         }
                     }
                 }
@@ -472,7 +473,8 @@ const borrarColegio = async (idColegio, idUsuario, transaction) => {
                     solicitud.res_comentario = "Colegio Borrado";
                     solicitud.id_usuario_reso = admin;
                     await solicitud.save({ transaction });
-                    await matrices_service_1.BecaService.desestimarBeca(idColegio, solicitud.id_beca_beca.id_colegio, solicitud.id_beca_beca.id_red, transaction);
+                    const idPariente = solicitud.id_pariente;
+                    await matrices_service_1.BecaService.desestimarBeca(idColegio, solicitud.id_beca_beca.id_colegio, solicitud.id_beca_beca.id_red, idPariente, transaction);
                 }
             }
         }

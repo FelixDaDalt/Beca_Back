@@ -11,6 +11,7 @@ import { notificaciones } from '../models/notificaciones';
 import { beca_automatizacion_ejecucion } from '../models/beca_automatizacion_ejecucion';
 import { red } from '../models/red';
 import { parametros } from '../models/parametros';
+import { autorizados } from '../models/autorizados';
 
 
 
@@ -93,7 +94,27 @@ export async function notificarBecasVencidas() {
 
     await actualizarRedColegiosVencimientoSQL(becasVencidas, t);
 
-    console.log("⏳ 4 - Registrando logs de becas...");
+    console.log("⏳ 4 - Actualizando utilizadas de parientes...");
+
+    // 🔄 Contador por id_pariente
+    const contadorParientes = new Map<number, number>();
+
+    for (const beca of becasVencidas) {
+      const idPariente = beca.id_pariente;
+      if (!idPariente) continue; // por si algún registro no tiene pariente
+
+      contadorParientes.set(idPariente, (contadorParientes.get(idPariente) ?? 0) + 1);
+    }
+
+    // 🔧 Ejecutar los updates en la tabla "autorizado"
+    for (const [idPariente, cantidad] of contadorParientes.entries()) {
+      await autorizados.decrement(
+        { utilizadas: cantidad },
+        { where: { id: idPariente }, transaction: t }
+      );
+    }
+
+    console.log("⏳ 5 - Registrando logs de becas...");
 
     const logs = becasVencidas.map(beca => ({
       id_beca_solicitud: beca.id,
@@ -308,7 +329,25 @@ export async function procesarBecasDadaBaja() {
 
     await actualizarRedColegiosBajaSQL(becasPendientes, t);
 
-    console.log("⏳ 5 - Registrando logs...");
+    console.log("⏳ 5 - Actualizando utilizadas de parientes...");
+
+    const contadorParientes = new Map<number, number>();
+
+    for (const beca of becasPendientes) {
+      const idPariente = beca.id_pariente;
+      if (!idPariente) continue;
+
+      contadorParientes.set(idPariente, (contadorParientes.get(idPariente) ?? 0) + 1);
+    }
+
+    for (const [idPariente, cantidad] of contadorParientes.entries()) {
+      await autorizados.decrement(
+        { utilizadas: cantidad },
+        { where: { id: idPariente }, transaction: t }
+      );
+    }
+
+    console.log("⏳ 6 - Registrando logs...");
 
     await beca_automatizacion_log.bulkCreate(
       becasPendientes.map(({ id, id_colegio_solic, id_beca_beca }) => ({

@@ -17,7 +17,7 @@ export interface administradorAttributes {
   borrado?: number;
   foto?: string;
   email: string;
-  superAdmin: number;
+  superAdmin?: number;
 }
 
 export type administradorPk = "id";
@@ -39,7 +39,7 @@ export class administrador extends Model<administradorAttributes, administradorC
   borrado?: number;
   foto?: string;
   email!: string;
-  superAdmin!: number;
+  superAdmin?: number;
 
   // administrador hasMany actividad_log via admin_id
   actividad_logs!: actividad_log[];

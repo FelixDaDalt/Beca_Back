@@ -1,5 +1,6 @@
 import * as Sequelize from 'sequelize';
 import { DataTypes, Model, Optional } from 'sequelize';
+import type { usuario, usuarioId } from './usuario';
 
 export interface reporte_errorAttributes {
   id: number;
@@ -23,6 +24,11 @@ export class reporte_error extends Model<reporte_errorAttributes, reporte_errorC
   borrado?: number;
   fecha!: Date;
 
+  // reporte_error belongsTo usuario via id_usuario
+  id_usuario_usuario!: usuario;
+  getId_usuario_usuario!: Sequelize.BelongsToGetAssociationMixin<usuario>;
+  setId_usuario_usuario!: Sequelize.BelongsToSetAssociationMixin<usuario, usuarioId>;
+  createId_usuario_usuario!: Sequelize.BelongsToCreateAssociationMixin<usuario>;
 
   static initModel(sequelize: Sequelize.Sequelize): typeof reporte_error {
     return reporte_error.init({
@@ -42,7 +48,11 @@ export class reporte_error extends Model<reporte_errorAttributes, reporte_errorC
     },
     id_usuario: {
       type: DataTypes.INTEGER,
-      allowNull: false
+      allowNull: false,
+      references: {
+        model: 'usuario',
+        key: 'id'
+      }
     },
     borrado: {
       type: DataTypes.BOOLEAN,

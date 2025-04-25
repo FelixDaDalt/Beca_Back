@@ -150,7 +150,7 @@ class beca_solicitud extends sequelize_1.Model {
                 type: sequelize_1.DataTypes.INTEGER,
                 allowNull: false,
                 references: {
-                    model: 'usuario',
+                    model: 'autorizados',
                     key: 'id'
                 }
             },
