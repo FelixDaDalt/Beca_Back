@@ -1,0 +1,7 @@
+# Ignorar archivo de entorno
+.env
+.env.local
+.env.prod
+
+# Ignorar carpeta de distribución
+dist/
